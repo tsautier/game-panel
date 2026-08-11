@@ -5,6 +5,7 @@ import { hytaleAdapter } from './hytale.js';
 import { minecraftAdapter } from './minecraft.js';
 import { palworldAdapter } from './palworld.js';
 import { projectZomboidAdapter } from './projectZomboid.js';
+import { rustAdapter } from './rust.js';
 import type { OvhcloudImageAdapter } from './types.js';
 
 const KNOWN_OVHCLOUD_ADAPTERS: OvhcloudImageAdapter[] = [
@@ -13,6 +14,7 @@ const KNOWN_OVHCLOUD_ADAPTERS: OvhcloudImageAdapter[] = [
     hytaleAdapter,
     palworldAdapter,
     projectZomboidAdapter,
+    rustAdapter,
 ];
 
 export function getKnownOvhcloudAdapters(): OvhcloudImageAdapter[] {

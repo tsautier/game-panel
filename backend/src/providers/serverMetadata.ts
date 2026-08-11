@@ -31,6 +31,11 @@ export type OvhcloudProjectZomboidMetadata = OvhcloudProviderMetadata & {
     serverType: 'project-zomboid';
 };
 
+export type OvhcloudRustMetadata = OvhcloudProviderMetadata & {
+    family: 'rust';
+    serverType: 'rust';
+};
+
 export function getLinuxGsmMetadata(server: GameServerRow): LinuxGsmProviderMetadata {
     if (server.provider !== 'linuxgsm') {
         throw Object.assign(new Error('Feature is only available for LinuxGSM servers'), { statusCode: 501 });
@@ -152,4 +157,14 @@ export function getOvhcloudProjectZomboidMetadata(server: GameServerRow): Ovhclo
     }
 
     return metadata as OvhcloudProjectZomboidMetadata;
+}
+
+export function getOvhcloudRustMetadata(server: GameServerRow): OvhcloudRustMetadata {
+    const metadata = getOvhcloudMetadata(server);
+
+    if (metadata.family !== 'rust' || metadata.serverType !== 'rust') {
+        throw Object.assign(new Error('Feature is only available for OVHcloud Rust servers'), { statusCode: 501 });
+    }
+
+    return metadata as OvhcloudRustMetadata;
 }

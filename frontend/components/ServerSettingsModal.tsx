@@ -39,6 +39,7 @@ import {
 } from './serverSettings/actionHandlers';
 import { createFileManagerHandlers } from './serverSettings/fileManagerHandlers';
 import {
+  envFromServer,
   formatBytes,
   splitFilePath,
 } from './serverSettings/utils';
@@ -81,6 +82,7 @@ export function ServerSettingsModal({
   const isHytaleOvhcloud = ovhcloudFamily === 'hytale';
   const isPalworldOvhcloud = ovhcloudFamily === 'palworld';
   const isProjectZomboidOvhcloud = ovhcloudFamily === 'project-zomboid';
+  const isRustOvhcloud = ovhcloudFamily === 'rust';
   const isCS2Ovhcloud = (() => {
     if (serverProvider !== 'ovhcloud') return false;
     try {
@@ -127,13 +129,36 @@ export function ServerSettingsModal({
   const addonsSupportedTypes = ['paper', 'fabric', 'neoforge'];
   const minecraftAddonsSupported = addonsSupportedTypes.includes(minecraftServerType ?? '');
 
+  // Project Zomboid's config files are prefixed with PZ_SERVERNAME (the container env,
+  // default "servertest"); the backend resolves the same value when reading/writing them.
+  // Resolve it here so the "Advanced Configuration" links point at the real files.
+  const [pzServerName, setPzServerName] = useState<string>('servertest');
+  useEffect(() => {
+    if (!isOpen || !isProjectZomboidOvhcloud || !serverId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const server = await apiClient.getServer(serverId);
+        if (cancelled) return;
+        const name = String(envFromServer(server)['PZ_SERVERNAME'] ?? '').trim();
+        setPzServerName(name || 'servertest');
+      } catch {
+        // Keep the default on failure; the links stay usable for the common case.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, isProjectZomboidOvhcloud, serverId]);
+
   const ovhcloudConfigFiles = useMemo(() => {
     if (isMinecraftJavaOvhcloud) return ['/server.properties'];
     if (isHytaleOvhcloud) return ['/game/Server/config.json'];
     if (isPalworldOvhcloud) return ['/server/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini'];
-    if (isProjectZomboidOvhcloud) return ['/zomboid/Server/servertest.ini', '/zomboid/Server/servertest_SandboxVars.lua'];
+    if (isProjectZomboidOvhcloud) {
+      const base = `/zomboid/Server/${pzServerName}`;
+      return [`${base}.ini`, `${base}_SandboxVars.lua`, `${base}_spawnpoints.lua`, `${base}_spawnregions.lua`];
+    }
     return undefined;
-  }, [isMinecraftJavaOvhcloud, isHytaleOvhcloud, isPalworldOvhcloud, isProjectZomboidOvhcloud]);
+  }, [isMinecraftJavaOvhcloud, isHytaleOvhcloud, isPalworldOvhcloud, isProjectZomboidOvhcloud, pzServerName]);
 
   const serverBackupSupported = (() => {
     if (serverProvider === 'linuxgsm') return true;
@@ -303,6 +328,12 @@ export function ServerSettingsModal({
     canWipeSoft,
     canWipeHard,
     canWriteCS2Frameworks,
+    canReadRustSettings,
+    canWriteRustSettings,
+    canReadRustMods,
+    canWriteRustMods,
+    canWriteRustFrameworks,
+    canUseRust,
     canAccessTab: baseCanAccessTab,
   } = createServerSettingsAccess(currentUser, serverPermissions);
 
@@ -316,6 +347,7 @@ export function ServerSettingsModal({
       isPalworldOvhcloud ||
       isProjectZomboidOvhcloud ||
       isCS2Ovhcloud ||
+      isRustOvhcloud ||
       isLinuxGSMGame);
 
   // Whether the Game Config tab has content for this user: each game exposes a different config
@@ -326,6 +358,7 @@ export function ServerSettingsModal({
     (isPalworldOvhcloud && canUsePalworld) ||
     (isProjectZomboidOvhcloud && canUseProjectZomboid) ||
     (isCS2Ovhcloud && (canEditContainerConfig || canWipeHard)) ||
+    (isRustOvhcloud && canUseRust) ||
     (isLinuxGSMGame && canUseFileManager);
 
   const canUseGameConfigTab = gameConfigApplicable;
@@ -958,6 +991,25 @@ export function ServerSettingsModal({
               textSecondary,
               inputBg,
               inputBorder,
+            } : null}
+            rustProps={isRustOvhcloud && serverId && canUseRust ? {
+              serverId,
+              serverStatus,
+              canReadSettings: canReadRustSettings,
+              canWriteSettings: canWriteRustSettings,
+              canReadMods: canReadRustMods,
+              canWriteMods: canWriteRustMods,
+              canWriteFrameworks: canWriteRustFrameworks,
+              canWipeSoft,
+              canWipeHard,
+              onReinstallStarted: onClose,
+              canManageEnv,
+              canEditContainerConfig,
+              containerConfigSaveCount,
+              borderColor,
+              contentBg,
+              textPrimary,
+              textSecondary,
             } : null}
           />
         }

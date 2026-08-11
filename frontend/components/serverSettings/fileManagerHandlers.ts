@@ -7,7 +7,23 @@ export interface FileItem {
   name: string;
   type: 'file' | 'folder' | 'symlink';
   size?: string;
+  sizeBytes?: number;
   modified?: string;
+}
+
+// The backend refuses to read a file over 2 MB inline (413) to avoid loading huge
+// files into the browser. Mirror that limit so we never open the editor for one.
+export const MAX_INLINE_EDIT_BYTES = 2 * 1024 * 1024;
+
+// Kick off a native browser download by clicking a hidden same-origin anchor. The
+// saved filename comes from the server's Content-Disposition header.
+function triggerDownload(url: string) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 interface CreateFileManagerHandlersDeps {
@@ -125,6 +141,16 @@ export const createFileManagerHandlers = (deps: CreateFileManagerHandlersDeps) =
         return;
       }
       if (!serverId) return;
+      // Files over 2 MB can't be edited in the browser — don't even open the editor
+      // (reading them 413s). Point the user at download → edit locally → upload.
+      const tooLargeMsg =
+        'This file is too large to edit in the browser (over 2 MB). Download it, edit it locally, then upload it back.';
+      if (typeof file.sizeBytes === 'number' && file.sizeBytes > MAX_INLINE_EDIT_BYTES) {
+        setSelectedFile(null);
+        setFilesError(tooLargeMsg);
+        return;
+      }
+      setFilesError(null);
       setSelectedFile(file);
       setFileContent('');
       setIsFileDirty(false);
@@ -135,6 +161,13 @@ export const createFileManagerHandlers = (deps: CreateFileManagerHandlersDeps) =
         const content = await apiClient.readServerFile(serverId, filePath, currentRoot);
         setFileContent(content ?? '');
       } catch (error: any) {
+        // Safety net if the size wasn't known up front: close the editor and show
+        // the clear message instead of a raw "status code 413".
+        if (error?.response?.status === 413) {
+          setSelectedFile(null);
+          setFilesError(tooLargeMsg);
+          return;
+        }
         setFileError(error?.response?.data?.error || error?.message || 'Failed to load file');
       } finally {
         setFileLoading(false);
@@ -364,15 +397,8 @@ export const createFileManagerHandlers = (deps: CreateFileManagerHandlersDeps) =
     }
     try {
       const filePath = joinPath(currentPath, selectedFile.name);
-      const { blob, filename } = await apiClient.downloadServerFile(serverId, filePath, currentRoot);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename || selectedFile.name;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      const url = await apiClient.getServerDownloadUrl(serverId, filePath, currentRoot);
+      triggerDownload(url);
     } catch (error: any) {
       setFileError(error?.response?.data?.error || error?.message || 'Failed to download file');
     }
@@ -387,15 +413,8 @@ export const createFileManagerHandlers = (deps: CreateFileManagerHandlersDeps) =
     }
     try {
       const path = joinPath(currentPath, file.name);
-      const { blob, filename } = await apiClient.downloadServerPath(serverId, path, currentRoot);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename || file.name;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      const url = await apiClient.getServerDownloadUrl(serverId, path, currentRoot);
+      triggerDownload(url);
     } catch (error: any) {
       setFilesError(error?.response?.data?.error || error?.message || 'Failed to download');
     }
@@ -403,19 +422,14 @@ export const createFileManagerHandlers = (deps: CreateFileManagerHandlersDeps) =
 
   const handleDownloadSelected = async () => {
     if (!serverId || selectedItems.length === 0) return;
+    // One fresh token + native download per item. Keep a small delay so back-to-back
+    // downloads don't trip the browser's "allow multiple downloads?" prompt.
     for (let i = 0; i < selectedItems.length; i++) {
       const name = selectedItems[i];
       try {
         const path = joinPath(currentPath, name);
-        const { blob, filename } = await apiClient.downloadServerPath(serverId, path, currentRoot);
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename || name;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
+        const url = await apiClient.getServerDownloadUrl(serverId, path, currentRoot);
+        triggerDownload(url);
         if (i < selectedItems.length - 1) {
           await new Promise<void>((resolve) => setTimeout(resolve, 400));
         }

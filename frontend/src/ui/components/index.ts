@@ -4,6 +4,7 @@ export { AppButton, type AppButtonProps, type AppButtonTone } from './AppButton'
 export { AppCard, type AppCardProps } from './AppCard';
 export { AppFormField } from './AppFormField';
 export { AppInput, type AppInputProps } from './AppInput';
+export { InfoTip, type InfoTipProps } from './InfoTip';
 export {
   AppModal,
   AppModalBody,

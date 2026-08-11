@@ -88,6 +88,23 @@ export function ServerConsoleTabs({
   const [autoScrollServer, setAutoScrollServer] = useState(true);
   const [pendingCliLogs, setPendingCliLogs] = useState(0);
   const [pendingServerLogs, setPendingServerLogs] = useState(0);
+  // Delay showing the "jump to bottom" button so it doesn't flicker during the
+  // initial scroll-to-bottom when a tab opens (autoScroll is briefly false while
+  // the container settles). Hidden instantly when we're back at the bottom.
+  const [showCliJump, setShowCliJump] = useState(false);
+  const [showServerJump, setShowServerJump] = useState(false);
+
+  useEffect(() => {
+    if (autoScrollCli) { setShowCliJump(false); return; }
+    const timer = window.setTimeout(() => setShowCliJump(true), 250);
+    return () => window.clearTimeout(timer);
+  }, [autoScrollCli]);
+
+  useEffect(() => {
+    if (autoScrollServer) { setShowServerJump(false); return; }
+    const timer = window.setTimeout(() => setShowServerJump(true), 250);
+    return () => window.clearTimeout(timer);
+  }, [autoScrollServer]);
   const [showTimestamps, setShowTimestamps] = useState(false);
   const cliContainerRef = useRef<HTMLDivElement>(null);
   const serverContainerRef = useRef<HTMLDivElement>(null);
@@ -219,12 +236,7 @@ export function ServerConsoleTabs({
     if (!isCLIConsoleActive || isMinimized) return;
 
     if (autoScrollCli) {
-      scrollContainerToBottomProgrammatic(
-        cliContainerRef.current,
-        isProgrammaticCliScrollRef,
-        'auto',
-        'cli-console'
-      );
+      // Scrolling is handled by the pin layout-effect below; just clear the counter.
       setPendingCliLogs(0);
       return;
     }
@@ -245,18 +257,36 @@ export function ServerConsoleTabs({
     if (isMinimized) return;
 
     if (autoScrollServer) {
-      scrollContainerToBottomProgrammatic(
-        serverContainerRef.current,
-        isProgrammaticServerScrollRef,
-        'auto',
-        activeTab
-      );
+      // Scrolling is handled by the pin layout-effect below; just clear the counter.
       setPendingServerLogs(0);
       return;
     }
 
     setPendingServerLogs((prev) => prev + diff);
   }, [activeLogs.length, activeTab, isCLIConsoleActive, isMinimized, autoScrollServer]);
+
+  // Keep the view pinned to the bottom while auto-scroll is on. Runs synchronously
+  // before paint on every new log, so it can't lose a requestAnimationFrame race
+  // with streaming logs (which previously let a stray scroll event drop auto-scroll).
+  useLayoutEffect(() => {
+    if (isCLIConsoleActive || isMinimized || !autoScrollServer) return;
+    const el = serverContainerRef.current;
+    if (!el) return;
+    isProgrammaticServerScrollRef.current = true;
+    el.scrollTop = el.scrollHeight;
+    const id = requestAnimationFrame(() => { isProgrammaticServerScrollRef.current = false; });
+    return () => cancelAnimationFrame(id);
+  }, [activeLogs.length, autoScrollServer, isCLIConsoleActive, isMinimized, isFullscreen]);
+
+  useLayoutEffect(() => {
+    if (!isCLIConsoleActive || isMinimized || !autoScrollCli) return;
+    const el = cliContainerRef.current;
+    if (!el) return;
+    isProgrammaticCliScrollRef.current = true;
+    el.scrollTop = el.scrollHeight;
+    const id = requestAnimationFrame(() => { isProgrammaticCliScrollRef.current = false; });
+    return () => cancelAnimationFrame(id);
+  }, [cliMessages.length, autoScrollCli, isCLIConsoleActive, isMinimized, isFullscreen]);
 
   const handleCliScroll = () => {
     const el = cliContainerRef.current;
@@ -716,14 +746,15 @@ export function ServerConsoleTabs({
                   )}
                 </div>
 
-                {!autoScrollCli && pendingCliLogs > 0 && (
+                {showCliJump && (
                   <AppButton
                     tone="ghost"
                     onClick={scrollCliToBottom}
+                    aria-label="Scroll to latest logs"
                     className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-lg border border-[var(--color-cyan-400)]/60 bg-[var(--gp-console-scroll-bg,#0b2f35)]/95 px-3 py-2 text-sm font-semibold text-[var(--color-cyan-400)] shadow-lg transition-colors hover:bg-[var(--gp-console-scroll-hover,#104049)]"
                   >
                     <ArrowDown className="h-4 w-4" />
-                    {pendingCliLogs} new log{pendingCliLogs > 1 ? 's' : ''}
+                    {pendingCliLogs > 0 ? `${pendingCliLogs} new log${pendingCliLogs > 1 ? 's' : ''}` : 'Jump to bottom'}
                   </AppButton>
                 )}
               </div>
@@ -765,14 +796,15 @@ export function ServerConsoleTabs({
                   )}
                 </div>
 
-                {!autoScrollServer && pendingServerLogs > 0 && (
+                {showServerJump && (
                   <AppButton
                     tone="ghost"
                     onClick={scrollServerToBottom}
+                    aria-label="Scroll to latest logs"
                     className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-lg border border-[var(--color-cyan-400)]/60 bg-[var(--gp-console-scroll-bg,#0b2f35)]/95 px-3 py-2 text-sm font-semibold text-[var(--color-cyan-400)] shadow-lg transition-colors hover:bg-[var(--gp-console-scroll-hover,#104049)]"
                   >
                     <ArrowDown className="h-4 w-4" />
-                    {pendingServerLogs} new log{pendingServerLogs > 1 ? 's' : ''}
+                    {pendingServerLogs > 0 ? `${pendingServerLogs} new log${pendingServerLogs > 1 ? 's' : ''}` : 'Jump to bottom'}
                   </AppButton>
                 )}
               </div>

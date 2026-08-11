@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, Info, Loader2, Save } from 'lucide-react';
-import { AppButton, AppInput, AppSelect, AppSlider, AppToggle } from '../../src/ui/components';
+import { AlertTriangle, Check, Loader2, Save } from 'lucide-react';
+import { AppButton, AppInput, AppSelect, AppSlider, AppToggle, InfoTip } from '../../src/ui/components';
 import { RestartToApplyNote } from './RestartToApplyNote';
 
 // Shared settings form for games exposing a generic `{ settings: [...] }` API.
@@ -117,7 +117,6 @@ export function GameSettingsSection({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-  const [openHelpKey, setOpenHelpKey] = useState<string | null>(null);
   const loaded = useRef(false);
 
   const isRunning = serverStatus === 'running';
@@ -207,29 +206,11 @@ export function GameSettingsSection({
             {fields.map((field) => (
               <div key={field.key} className={`rounded-lg border ${borderColor} bg-gp-surface-base/45 p-3 sm:p-4 flex flex-col justify-center`}>
                 <div className={`grid grid-cols-1 items-center gap-3 sm:gap-4 w-full ${field.type === 'boolean' ? 'sm:grid-cols-[1fr_auto]' : 'sm:grid-cols-[minmax(185px,1.15fr)_minmax(0,1.1fr)]'}`}>
-                  <div className="relative" data-setting-help>
-                    <span className={`flex items-center gap-2 text-sm font-semibold leading-tight sm:pr-2 ${textPrimary}`}>
+                  <div>
+                    <span className={`flex items-center gap-1.5 text-sm font-semibold leading-tight sm:pr-2 ${textPrimary}`}>
                       <span className="break-words">{field.label}</span>
-                      {field.description && (
-                        <AppButton
-                          tone="ghost"
-                          aria-label={`Info: ${field.label}`}
-                          aria-expanded={openHelpKey === field.key}
-                          onClick={() => setOpenHelpKey((cur) => (cur === field.key ? null : field.key))}
-                          className="inline-flex h-5 shrink-0 items-center justify-center px-0.5 text-[var(--color-cyan-400)]/80 transition-colors hover:text-[var(--color-cyan-400)]"
-                        >
-                          <Info className="h-3.5 w-3.5" />
-                        </AppButton>
-                      )}
+                      {field.description && <InfoTip text={field.description} />}
                     </span>
-                    {field.description && openHelpKey === field.key && (
-                      <div className="absolute left-0 top-full z-20 mt-2 w-[260px] max-w-[calc(100vw-4rem)]">
-                        <div className="absolute -top-1.5 left-4 h-3 w-3 rotate-45 border-l border-t border-gray-700/80 bg-gp-surface-input" />
-                        <div className="relative rounded-xl border border-gray-700/80 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(11,18,32,0.98))] px-3.5 py-3 text-xs font-normal leading-relaxed text-gray-300 shadow-[0_18px_40px_rgba(2,6,23,0.45)] backdrop-blur-sm">
-                          {field.description}
-                        </div>
-                      </div>
-                    )}
                   </div>
                   <div>
                     {field.type === 'boolean' && (

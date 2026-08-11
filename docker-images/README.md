@@ -11,6 +11,7 @@ This directory holds the Docker image sources maintained alongside OVHcloud Game
 | Counter-Strike 2 | `counter-strike/2/` | CS2 dedicated server runtime with optional framework support. |
 | Palworld | `palworld/` | Palworld dedicated server runtime. |
 | Project Zomboid | `project-zomboid/` | Project Zomboid dedicated server runtime. |
+| Rust | `rust/` | Rust dedicated server runtime. |
 
 ## 🛠️ Game Panel images
 
@@ -40,6 +41,7 @@ Game server images follow the same general conventions:
 | Counter-Strike 2 | Supported | Not supported | Not supported | Frameworks (MetaMod + CounterStrikeSharp) | Includes MetaMod and CounterStrikeSharp helper scripts. |
 | Palworld | Supported (REST API) | Native (game-managed) | Supported | Not supported | Steam app id 2394010; on-demand save via REST. |
 | Project Zomboid | Supported | Supported | Supported | Steam Workshop | Steam app id 380870; SteamCMD install; branch selection via `PZ_BRANCH`. |
+| Rust | Supported | Supported | Supported | Oxide/uMod | Steam app id 258550; SteamCMD install; Rust+ companion app. |
 
 ## 📚 Documentation
 
@@ -48,6 +50,7 @@ Game server images follow the same general conventions:
 - [Counter-Strike 2 image](counter-strike/2/README.md)
 - [Palworld image](palworld/README.md)
 - [Project Zomboid image](project-zomboid/README.md)
+- [Rust image](rust/README.md)
 - [Game Panel Updater image](gamepanel/updater/README.md)
 
 ## 📝 Notes

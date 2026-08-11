@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Info, RefreshCw, Save } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, RefreshCw, Save } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { GameConfigAdvancedLinks } from './serverSettings/GameConfigAdvancedLinks';
 import { MinecraftSections, type MinecraftSectionsProps } from './serverSettings/MinecraftTab';
@@ -7,7 +7,8 @@ import { HytaleSections, type HytaleSectionsProps } from './serverSettings/Hytal
 import { PalworldSections, type PalworldSectionsProps } from './serverSettings/PalworldTab';
 import { ProjectZomboidSections, type ProjectZomboidSectionsProps } from './serverSettings/ProjectZomboidTab';
 import { CS2Sections, type CS2SectionsProps } from './serverSettings/CS2ConfigTab';
-import { AppButton, AppInput, AppSelect, AppSlider, AppToggle } from '../src/ui/components';
+import { RustSections, type RustSectionsProps } from './serverSettings/RustTab';
+import { AppButton, AppInput, AppSelect, AppSlider, AppToggle, InfoTip } from '../src/ui/components';
 import {
   type CatalogGameDefinition,
   type DbConfigFileDefinition,
@@ -45,6 +46,7 @@ interface GameConfigTabProps {
   palworldProps?: PalworldSectionsProps | null;
   projectZomboidProps?: ProjectZomboidSectionsProps | null;
   cs2Props?: CS2SectionsProps | null;
+  rustProps?: RustSectionsProps | null;
   ovhcloudConfigFiles?: string[];
 }
 
@@ -162,6 +164,7 @@ export function GameConfigTab({
   palworldProps,
   projectZomboidProps,
   cs2Props,
+  rustProps,
   ovhcloudConfigFiles,
 }: GameConfigTabProps) {
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -178,7 +181,6 @@ export function GameConfigTab({
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [initialFieldValues, setInitialFieldValues] = useState<Record<string, string>>({});
   const [touchedFieldIds, setTouchedFieldIds] = useState<Record<string, boolean>>({});
-  const [openFieldHelpId, setOpenFieldHelpId] = useState<string | null>(null);
 
   const configChanged = useMemo(
     () => !areMapsEqual(fieldValues, initialFieldValues),
@@ -467,21 +469,6 @@ export function GameConfigTab({
     };
   }, [configChanged, saveSuccessMessage]);
 
-  useEffect(() => {
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target;
-      if (target instanceof Element && target.closest('[data-game-config-help]')) {
-        return;
-      }
-      setOpenFieldHelpId(null);
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-    };
-  }, []);
-
   const openFileInFileManager = useCallback(
     (path: string) => {
       if (!canReadFileManager) return;
@@ -683,7 +670,7 @@ export function GameConfigTab({
   const borderColor = 'border-gray-700';
   const textPrimary = 'text-white';
   const textSecondary = 'text-gray-400';
-  const hasGameConfiguration = detectedConfigFiles.length > 0 || verifiedConfigFiles.length > 0 || Boolean(minecraftProps) || Boolean(hytaleProps) || Boolean(palworldProps) || Boolean(projectZomboidProps) || Boolean(cs2Props);
+  const hasGameConfiguration = detectedConfigFiles.length > 0 || verifiedConfigFiles.length > 0 || Boolean(minecraftProps) || Boolean(hytaleProps) || Boolean(palworldProps) || Boolean(projectZomboidProps) || Boolean(cs2Props) || Boolean(rustProps);
   const showSaveSuccessToast = Boolean(saveSuccessMessage && !configChanged);
   const showBottomStatusPanel = Boolean(saveError);
 
@@ -793,35 +780,13 @@ export function GameConfigTab({
                               className={`rounded-lg border ${borderColor} bg-gp-surface-base/45 p-3 sm:p-4`}
                             >
                               <div className="grid grid-cols-1 sm:grid-cols-[minmax(185px,1.15fr)_minmax(0,1.1fr)] items-center gap-3 sm:gap-4">
-                                <div className="relative" data-game-config-help>
+                                <div>
                                   <label
-                                    className={`flex items-center gap-2 text-sm font-semibold leading-tight sm:pr-2 ${textPrimary}`}
+                                    className={`flex items-center gap-1.5 text-sm font-semibold leading-tight sm:pr-2 ${textPrimary}`}
                                   >
                                     <span className="break-all">{fieldLabel}</span>
-                                    {fieldDescription && (
-                                      <AppButton
-                                        tone="ghost"
-                                        aria-label={`Show info for ${fieldLabel}`}
-                                        aria-expanded={openFieldHelpId === fieldId}
-                                        onClick={() =>
-                                          setOpenFieldHelpId((current) =>
-                                            current === fieldId ? null : fieldId
-                                          )
-                                        }
-                                        className="inline-flex h-5 shrink-0 items-center justify-center px-0.5 text-[var(--color-cyan-400)]/80 transition-colors hover:text-[var(--color-cyan-400)]"
-                                      >
-                                        <Info className="h-3.5 w-3.5" />
-                                      </AppButton>
-                                    )}
+                                    {fieldDescription && <InfoTip text={fieldDescription} />}
                                   </label>
-                                  {fieldDescription && openFieldHelpId === fieldId && (
-                                    <div className="absolute left-0 top-full z-20 mt-3 w-[280px] max-w-[calc(100vw-4rem)]">
-                                      <div className="absolute -top-1.5 left-4 h-3 w-3 rotate-45 border-l border-t border-gray-700/80 bg-gp-surface-input" />
-                                      <div className="relative rounded-xl border border-gray-700/80 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(11,18,32,0.98))] px-3.5 py-3 text-xs font-normal leading-relaxed text-gray-300 shadow-[0_18px_40px_rgba(2,6,23,0.45)] backdrop-blur-sm">
-                                        {fieldDescription}
-                                      </div>
-                                    </div>
-                                  )}
                                 </div>
                                 <div className="space-y-1.5">
                                   {field.type === 'boolean' ? (
@@ -1022,7 +987,25 @@ export function GameConfigTab({
             </div>
           )}
 
-          {!minecraftProps && !hytaleProps && !palworldProps && !projectZomboidProps && !cs2Props && (
+          {rustProps && (
+            <div className="px-1 sm:px-2">
+              <RustSections
+                {...rustProps}
+                advancedLinksNode={
+                  <GameConfigAdvancedLinks
+                    configFiles={detectedConfigFiles}
+                    isLoading={configFilesLoading}
+                    error={configFilesError}
+                    canReadFileManager={canReadFileManager}
+                    canWriteFileManager={canWriteFileManager}
+                    onOpenFileManagerPath={openFileInFileManager}
+                  />
+                }
+              />
+            </div>
+          )}
+
+          {!minecraftProps && !hytaleProps && !palworldProps && !projectZomboidProps && !cs2Props && !rustProps && (
             <GameConfigAdvancedLinks
               configFiles={detectedConfigFiles}
               isLoading={configFilesLoading}

@@ -75,52 +75,6 @@ assert_palworld_server_stopped() {
   fi
 }
 
-gameserver_meta_file() {
-  printf '%s\n' "${GAMESERVER_META_FILE:-${DATA_DIR:-/data}/.gameserver-meta.json}"
-}
-
-server_binary_relative_to_data() {
-  case "${PALWORLD_SERVER_BIN:-}" in
-    "${DATA_DIR:-/data}"/*)
-      printf '%s\n' "${PALWORLD_SERVER_BIN#${DATA_DIR}/}"
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-}
-
-write_gameserver_metadata() {
-  META_FILE="$(gameserver_meta_file)"
-  META_DIR="$(dirname "${META_FILE}")"
-  ARTIFACT_PATH="$(server_binary_relative_to_data || printf '%s\n' "${PALWORLD_SERVER_BIN:-}")"
-
-  mkdir -p "${META_DIR}"
-  META_TMP="$(mktemp "${META_DIR}/.gameserver-meta.XXXXXX")"
-
-  jq -n \
-    --arg serverType "${GAMESERVER_SERVER_TYPE:-palworld}" \
-    --arg steamAppId "${PALWORLD_STEAM_APP_ID:-2394010}" \
-    --arg installDir "${PALWORLD_INSTALL_DIR:-/data/server}" \
-    --arg artifactPath "${ARTIFACT_PATH}" '
-      {
-        schemaVersion: 1,
-        serverType: $serverType,
-        steam: {
-          appId: (($steamAppId | tonumber?) // $steamAppId)
-        },
-        install: {
-          path: $installDir
-        },
-        artifact: {
-          path: $artifactPath
-        }
-      }
-    ' > "${META_TMP}"
-
-  mv "${META_TMP}" "${META_FILE}"
-}
-
 palworld_config_file() {
   printf '%s\n' "${PALWORLD_CONFIG_FILE:-${PALWORLD_INSTALL_DIR:-${DATA_DIR:-/data}/server}/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini}"
 }

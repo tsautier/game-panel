@@ -99,6 +99,7 @@ export function useFileManagerState({ activeTab, isOpen, serverId, containerConf
           name: entry.name,
           type: isDir ? 'folder' : isSymlink ? 'symlink' : 'file',
           size: isDir ? undefined : formatBytes(entry.size),
+          sizeBytes: isDir ? undefined : entry.size,
           modified: entry.modifiedAt,
         };
       });

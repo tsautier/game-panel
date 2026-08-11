@@ -25,7 +25,7 @@ export interface ModsSectionProps {
   serverId: number;
   serverStatus?: string | null;
   kind: 'mods' | 'plugins';
-  apiKind: 'hytale' | 'minecraft';
+  apiKind: 'hytale' | 'minecraft' | 'rust';
   canRead: boolean;
   canWrite: boolean;
   borderColor: string;
@@ -52,6 +52,9 @@ export function ModsSection({
   const [entries, setEntries] = useState<ModEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The area's folder is created lazily (e.g. Oxide generates oxide/plugins only on
+  // the first server start after install), so a 404 means "not created yet", not an error.
+  const [notInitialized, setNotInitialized] = useState(false);
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
@@ -61,18 +64,29 @@ export function ModsSection({
 
   const label = kind === 'plugins' ? 'Plugins' : 'Mods';
   const singularLabel = kind === 'plugins' ? 'plugin' : 'mod';
+  // Rust Oxide plugins are C# source files; the other games load Java archives.
+  const acceptExt = apiKind === 'rust' ? '.cs' : '.jar';
 
   const loadEntries = useCallback(async () => {
     if (!canRead) return;
     setLoading(true);
     setError(null);
+    setNotInitialized(false);
     try {
       const data = apiKind === 'hytale'
         ? await apiClient.listHytaleMods(serverId)
-        : await apiClient.listMinecraftAddons(serverId);
+        : apiKind === 'rust'
+          ? await apiClient.listRustMods(serverId)
+          : await apiClient.listMinecraftAddons(serverId);
       setEntries((data.entries ?? []).filter((e) => e.type !== 'dir'));
     } catch (err: any) {
-      setError(err?.response?.data?.error || err?.message || `Failed to load ${kind}.`);
+      // A missing area folder (404) isn't a real error — surface a soft hint instead.
+      if (err?.response?.status === 404) {
+        setEntries([]);
+        setNotInitialized(true);
+      } else {
+        setError(err?.response?.data?.error || err?.message || `Failed to load ${kind}.`);
+      }
     } finally {
       setLoading(false);
     }
@@ -101,7 +115,9 @@ export function ModsSection({
       try {
         const uploadFn = apiKind === 'hytale'
           ? apiClient.uploadHytaleMod.bind(apiClient)
-          : apiClient.uploadMinecraftAddon.bind(apiClient);
+          : apiKind === 'rust'
+            ? apiClient.uploadRustMod.bind(apiClient)
+            : apiClient.uploadMinecraftAddon.bind(apiClient);
         await uploadFn(serverId, file, (pct) => {
           setUploadQueue((prev) => prev.map((q) => q.id === item.id ? { ...q, progress: pct } : q));
         });
@@ -124,6 +140,8 @@ export function ModsSection({
     try {
       if (apiKind === 'hytale') {
         await apiClient.deleteHytaleMods(serverId, [`/${name}`]);
+      } else if (apiKind === 'rust') {
+        await apiClient.deleteRustMods(serverId, [`/${name}`]);
       } else {
         await apiClient.deleteMinecraftAddons(serverId, [`/${name}`]);
       }
@@ -175,13 +193,13 @@ export function ModsSection({
             <p className={`text-xs mt-0.5 ${textSecondary} ${isDragging ? 'invisible' : ''}`}>Drag & drop or click to browse</p>
           </div>
           <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border transition-colors duration-150 ${isDragging ? 'bg-[var(--color-cyan-400)]/15 text-[var(--color-cyan-400)] border-[var(--color-cyan-400)]/30' : 'bg-gray-200 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600/50'}`}>
-            .jar
+            {acceptExt}
           </span>
           <input
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".jar"
+            accept={acceptExt}
             className="hidden"
             onChange={(e) => {
               if (e.target.files) void handleFiles(Array.from(e.target.files));
@@ -268,8 +286,20 @@ export function ModsSection({
           </div>
         )}
 
+        {/* Folder not created yet (e.g. Oxide hasn't generated its plugins folder) */}
+        {!loading && !error && notInitialized && (
+          <div className="flex items-start gap-2 px-4 py-4 text-sm text-amber-600 dark:text-amber-300">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>
+              {apiKind === 'rust'
+                ? 'Oxide hasn’t generated its plugins folder yet. Restart the server once and it will be created — then your plugins will appear here.'
+                : `This ${kind} folder doesn’t exist yet. It will be created when you upload your first file.`}
+            </span>
+          </div>
+        )}
+
         {/* Empty state */}
-        {!loading && !error && entries.length === 0 && (
+        {!loading && !error && !notInitialized && entries.length === 0 && (
           <div className="flex flex-col items-center justify-center py-10 gap-3">
             <div className="w-12 h-12 rounded-full bg-gray-700/50 flex items-center justify-center">
               <Package className="w-5 h-5 text-gray-500" />
@@ -277,7 +307,7 @@ export function ModsSection({
             <div className="text-center">
               <p className={`text-sm font-medium ${textPrimary}`}>No {kind} installed</p>
               <p className={`text-xs mt-0.5 ${textSecondary}`}>
-                {canWrite ? `Upload a .jar file above to add your first ${singularLabel}` : `No ${kind} found`}
+                {canWrite ? `Upload a ${acceptExt} file above to add your first ${singularLabel}` : `No ${kind} found`}
               </p>
             </div>
           </div>

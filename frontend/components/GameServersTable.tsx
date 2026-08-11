@@ -17,6 +17,9 @@ const GameServersTableDialogs = lazy(() =>
 );
 import { GameServersMobileList } from './gameServersTable/GameServersMobileList';
 import { GameServersDesktopTable } from './gameServersTable/GameServersDesktopTable';
+import { GameServersGrid } from './gameServersTable/GameServersGrid';
+import { ViewModeToggle, type ServersViewMode } from './gameServersTable/ViewModeToggle';
+import type { GameServerCardActions } from './gameServersTable/GameServerCard';
 import { ODS_CHART_THEME } from './charts/theme';
 import {
   type MetricType,
@@ -105,6 +108,21 @@ export function GameServersTable({
   useEffect(() => {
     localStorage.setItem('gp_visible_metrics', JSON.stringify(visibleMetrics));
   }, [visibleMetrics]);
+
+  // List / Grid view preference, persisted like the visible-metrics choice.
+  const [viewMode, setViewMode] = useState<ServersViewMode>(() => {
+    try {
+      const stored = localStorage.getItem('gp_servers_view');
+      if (stored === 'grid' || stored === 'list') return stored;
+    } catch { /* ignore */ }
+    return 'list';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('gp_servers_view', viewMode);
+    } catch { /* ignore */ }
+  }, [viewMode]);
 
   const toggleMetric = (metric: MetricType) => {
     setVisibleMetrics((prev) => {
@@ -543,6 +561,32 @@ export function GameServersTable({
           : 'Network';
   const canOpenInstallModal = Boolean(onOpenInstallModal) && canInstall;
 
+  // Everything the card needs, built once and shared by both the mobile list and the grid.
+  const cardActions: GameServerCardActions = {
+    currentUser,
+    permissionsByServer,
+    rowBorder,
+    textPrimary,
+    textSecondary,
+    textTertiary,
+    inputBg,
+    inputBorder,
+    editingId,
+    editValue,
+    setEditValue,
+    handleSaveEdit,
+    handleCancelEdit,
+    handleStartEdit,
+    getGameLabel,
+    openConnectionModal,
+    openHistoryModal,
+    openMetricModal,
+    onConfirmAction: (serverId, serverName, action) =>
+      setConfirmAction({ show: true, serverId, serverName, action }),
+    handleOpenSettings,
+    onAction,
+  };
+
   // Mount the lazy dialogs on first open, then keep them mounted so close transitions still play.
   const anyDialogOpen =
     metricModal.isOpen || historyModal.isOpen || Boolean(selectedConnectionServer);
@@ -553,76 +597,67 @@ export function GameServersTable({
     <div
       className={`${cardBg} rounded-lg border ${cardBorder} ${cardShadow} mb-6 px-3 pt-3 pb-3 md:px-6 md:pt-6 lg:pb-0`}
     >
-      <div className="mb-3 md:mb-4">
+      <div className="mb-3 md:mb-4 flex items-center justify-between gap-3">
         <h2 className={`text-lg md:text-xl ${textPrimary}`}>Game Servers</h2>
+        <ViewModeToggle value={viewMode} onChange={setViewMode} />
       </div>
 
-      <GameServersDesktopTable
-        filteredAndSortedServers={filteredAndSortedServers}
-        currentUser={currentUser}
-        permissionsByServer={permissionsByServer}
-        borderColor={borderColor}
-        rowBorder={rowBorder}
-        textPrimary={textPrimary}
-        textSecondary={textSecondary}
-        textTertiary={textTertiary}
-        inputBg={inputBg}
-        inputBorder={inputBorder}
-        editingId={editingId}
-        editValue={editValue}
-        setEditValue={setEditValue}
-        handleSaveEdit={handleSaveEdit}
-        handleCancelEdit={handleCancelEdit}
-        handleStartEdit={handleStartEdit}
-        getGameLabel={getGameLabel}
-        openConnectionModal={openConnectionModal}
-        openHistoryModal={openHistoryModal}
-        openMetricModal={openMetricModal}
-        visibleMetrics={visibleMetrics}
-        onToggleMetric={toggleMetric}
-        copyConnectionAddress={copyConnectionAddress}
-        getConnectionCopyState={getConnectionCopyState}
-        setConfirmAction={setConfirmAction}
-        handleOpenSettings={handleOpenSettings}
-        onAction={onAction}
-        canOpenInstallModal={canOpenInstallModal}
-        canInstall={canInstall}
-        onOpenInstallModal={onOpenInstallModal}
-        publicConnectionHost={PUBLIC_CONNECTION_HOST}
-        sortField={sortField}
-        sortOrder={sortOrder}
-        handleSort={handleSort}
-      />
+      {viewMode === 'list' ? (
+        <>
+          <GameServersDesktopTable
+            filteredAndSortedServers={filteredAndSortedServers}
+            currentUser={currentUser}
+            permissionsByServer={permissionsByServer}
+            borderColor={borderColor}
+            rowBorder={rowBorder}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
+            textTertiary={textTertiary}
+            inputBg={inputBg}
+            inputBorder={inputBorder}
+            editingId={editingId}
+            editValue={editValue}
+            setEditValue={setEditValue}
+            handleSaveEdit={handleSaveEdit}
+            handleCancelEdit={handleCancelEdit}
+            handleStartEdit={handleStartEdit}
+            getGameLabel={getGameLabel}
+            openConnectionModal={openConnectionModal}
+            openHistoryModal={openHistoryModal}
+            openMetricModal={openMetricModal}
+            visibleMetrics={visibleMetrics}
+            onToggleMetric={toggleMetric}
+            copyConnectionAddress={copyConnectionAddress}
+            getConnectionCopyState={getConnectionCopyState}
+            setConfirmAction={setConfirmAction}
+            handleOpenSettings={handleOpenSettings}
+            onAction={onAction}
+            canOpenInstallModal={canOpenInstallModal}
+            canInstall={canInstall}
+            onOpenInstallModal={onOpenInstallModal}
+            publicConnectionHost={PUBLIC_CONNECTION_HOST}
+            sortField={sortField}
+            sortOrder={sortOrder}
+            handleSort={handleSort}
+          />
 
-      <GameServersMobileList
-        filteredAndSortedServers={filteredAndSortedServers}
-        currentUser={currentUser}
-        permissionsByServer={permissionsByServer}
-        rowBorder={rowBorder}
-        textPrimary={textPrimary}
-        textSecondary={textSecondary}
-        textTertiary={textTertiary}
-        inputBg={inputBg}
-        inputBorder={inputBorder}
-        editingId={editingId}
-        editValue={editValue}
-        setEditValue={setEditValue}
-        handleSaveEdit={handleSaveEdit}
-        handleCancelEdit={handleCancelEdit}
-        handleStartEdit={handleStartEdit}
-        getGameLabel={getGameLabel}
-        openConnectionModal={openConnectionModal}
-        openHistoryModal={openHistoryModal}
-        openMetricModal={openMetricModal}
-        onConfirmAction={(serverId, serverName, action) =>
-          setConfirmAction({ show: true, serverId, serverName, action })
-        }
-        handleOpenSettings={handleOpenSettings}
-        onAction={onAction}
-        canOpenInstallModal={canOpenInstallModal}
-        canInstall={canInstall}
-        onOpenInstallModal={onOpenInstallModal}
-      />
+          <GameServersMobileList
+            filteredAndSortedServers={filteredAndSortedServers}
+            canOpenInstallModal={canOpenInstallModal}
+            canInstall={canInstall}
+            onOpenInstallModal={onOpenInstallModal}
+            {...cardActions}
+          />
+        </>
+      ) : (
+        <GameServersGrid
+          filteredAndSortedServers={filteredAndSortedServers}
+          canOpenInstallModal={canOpenInstallModal}
+          canInstall={canInstall}
+          onOpenInstallModal={onOpenInstallModal}
+          {...cardActions}
+        />
+      )}
 
       {dialogsMounted && (
       <Suspense fallback={null}>

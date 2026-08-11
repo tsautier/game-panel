@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useBodyScrollLock } from '../src/ui/utils/useBodyScrollLock';
-import { AlertTriangle, ArrowLeft, ArrowRight, ChevronDown, Eye, EyeOff, Info, Package, Plus, Search, Settings2, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, ChevronDown, Eye, EyeOff, Package, Plus, Search, Settings2, Trash2, X } from 'lucide-react';
 import { InstallationProgressModal } from './InstallationProgressModal';
 import type { InstallGameHandlerPayload } from './app/appActionHandlers';
 import type { InstallInteraction, InstallStep } from '../types/gameServer';
@@ -9,7 +9,7 @@ import { OVH_UNIFIED, filterLgsmForUnified } from '../utils/unifiedGameCatalog';
 import { getLinuxGsmGames, type LinuxGsmGame } from '../utils/linuxGsmCatalog';
 import { apiClient } from '../utils/api';
 import { GameVersionModal } from './GameVersionModal';
-import { AppButton, AppSelect, AppToggle } from '../src/ui/components';
+import { AppButton, AppSelect, AppToggle, InfoTip } from '../src/ui/components';
 import { ProviderLogo } from './gameServersTable/ProviderBadge';
 import { MinecraftVersionPicker } from './MinecraftVersionPicker';
 import { getMcServerType, getPickerManagedKeys, type McServerType } from '../utils/minecraftCatalog';
@@ -336,6 +336,16 @@ function HealthcheckEditor({ initial, onChange }: { initial: Record<string, unkn
   );
 }
 
+// Resolve a unique server name: if `base` is already taken, append an incrementing
+// " (1)", " (2)", … suffix until a free name is found.
+function makeUniqueServerName(base: string, used?: string[]): string {
+  const taken = new Set(used ?? []);
+  if (!taken.has(base)) return base;
+  let n = 1;
+  while (taken.has(`${base} (${n})`)) n++;
+  return `${base} (${n})`;
+}
+
 // ---------- ConfigModal ----------
 interface ConfigModalProps {
   title: string;
@@ -359,6 +369,7 @@ interface ConfigModalProps {
   setHytaleOptions?: (opts: { patchline: string; profileUuid: string }) => void;
   showPalworldAdmin?: boolean;
   showProjectZomboidFields?: boolean;
+  showRustFields?: boolean;
   usedServerNames?: string[];
   requireSteamCredentials?: boolean;
   steamUsername?: string;
@@ -395,6 +406,7 @@ function ConfigModal({
   hytaleOptions, setHytaleOptions,
   showPalworldAdmin,
   showProjectZomboidFields,
+  showRustFields,
   usedServerNames,
   requireSteamCredentials, steamUsername, setSteamUsername, steamPassword, setSteamPassword,
   requireGameCopy,
@@ -404,9 +416,8 @@ function ConfigModal({
 }: ConfigModalProps) {
   useBodyScrollLock(true);
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
-  const [showAdminHelp, setShowAdminHelp] = React.useState(false);
   const [showAdminPw, setShowAdminPw] = React.useState(false);
-  const nameError = usedServerNames?.includes(serverName.trim()) ? 'A server with this name already exists.' : null;
+  const [showRconPw, setShowRconPw] = React.useState(false);
 
   React.useEffect(() => {
     if (error) setAdvancedOpen(true);
@@ -483,6 +494,23 @@ function ConfigModal({
     if (missing.length > 0) setEnvRows([...envRows, ...missing]);
   }, [showProjectZomboidFields, envRows, setEnvRows]);
 
+  // Rust: RCON password (basic) + launch params (advanced), backed by env vars.
+  const rustRcon = envRows.find((r) => r.key.trim().toUpperCase() === 'RUST_RCON_PASSWORD')?.value ?? '';
+  const setRustRcon = (val: string) => upsertEnv('RUST_RCON_PASSWORD', val);
+  // Rust silently disables WebRCON below 8 chars (console breaks) — enforce it here.
+  const rustRconTooShort = Boolean(showRustFields) && rustRcon.trim().length < 8;
+
+  // Seed RUST_SERVER_IDENTITY so it is present/editable in the Environment Variables list.
+  const rustEnvSeeded = React.useRef(false);
+  React.useEffect(() => {
+    if (!showRustFields) { rustEnvSeeded.current = false; return; }
+    if (rustEnvSeeded.current || envRows.length === 0) return;
+    rustEnvSeeded.current = true;
+    if (!envRows.some((r) => r.key.trim().toUpperCase() === 'RUST_SERVER_IDENTITY')) {
+      setEnvRows([...envRows, { key: 'RUST_SERVER_IDENTITY', value: 'rust-server' }]);
+    }
+  }, [showRustFields, envRows, setEnvRows]);
+
   // Default the branch to the first available one once the list loads.
   const pzBranchDefaulted = React.useRef(false);
   React.useEffect(() => {
@@ -495,7 +523,6 @@ function ConfigModal({
 
   // Branch is picked from the fetched list; a custom branch can be set manually via
   // the PZ_BRANCH environment variable (which stays in sync with this select).
-  const [showBranchHelp, setShowBranchHelp] = React.useState(false);
   const branchOptions = React.useMemo(() => {
     const opts: { value: string; label: string }[] = [];
     const seen = new Set<string>();
@@ -533,34 +560,19 @@ function ConfigModal({
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
               Server Name
             </label>
-            <input type="text" value={serverName} onChange={(e) => setServerName(e.target.value)}
+            {/* A duplicate name is auto-suffixed with " (n)" live as the user types, so the final name is always shown. */}
+            <input type="text" value={serverName}
+              onChange={(e) => setServerName(makeUniqueServerName(e.target.value, usedServerNames))}
               placeholder="My Game Server" className={inputCls} />
-            {nameError && <p className="mt-1.5 text-xs text-red-400">{nameError}</p>}
           </div>
 
           {showPalworldAdmin && (
             <div>
-              <div className="relative mb-2 flex">
+              <div className="mb-2 flex">
                 <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Palworld Admin Password
-                  <AppButton
-                    tone="ghost"
-                    aria-label="About the admin password"
-                    aria-expanded={showAdminHelp}
-                    onClick={() => setShowAdminHelp((v) => !v)}
-                    className="inline-flex h-5 shrink-0 items-center justify-center px-0.5 text-[var(--color-cyan-400)]/80 transition-colors hover:text-[var(--color-cyan-400)]"
-                  >
-                    <Info className="h-3.5 w-3.5" />
-                  </AppButton>
+                  <InfoTip text="Used for in-game admin actions and the server's REST API. Leave empty to let the panel generate one. You can change it later in Container Settings." />
                 </span>
-                {showAdminHelp && (
-                  <div className="absolute left-0 top-full z-20 mt-2 w-[280px] max-w-[calc(100vw-4rem)]">
-                    <div className="absolute -top-1.5 left-4 h-3 w-3 rotate-45 border-l border-t border-gray-700/80 bg-gp-surface-input" />
-                    <div className="relative rounded-xl border border-gray-700/80 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(11,18,32,0.98))] px-3.5 py-3 text-xs font-normal normal-case tracking-normal leading-relaxed text-gray-300 shadow-[0_18px_40px_rgba(2,6,23,0.45)] backdrop-blur-sm">
-                      Used for in-game admin actions and the server&apos;s REST API. Leave empty to let the panel generate one. You can change it later in Container Settings.
-                    </div>
-                  </div>
-                )}
               </div>
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -596,27 +608,11 @@ function ConfigModal({
           {showProjectZomboidFields && (
             <>
               <div>
-                <div className="relative mb-2 flex">
+                <div className="mb-2 flex">
                   <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Branch
-                    <AppButton
-                      tone="ghost"
-                      aria-label="About the branch choice"
-                      aria-expanded={showBranchHelp}
-                      onClick={() => setShowBranchHelp((v) => !v)}
-                      className="inline-flex h-5 shrink-0 items-center justify-center px-0.5 text-[var(--color-cyan-400)]/80 transition-colors hover:text-[var(--color-cyan-400)]"
-                    >
-                      <Info className="h-3.5 w-3.5" />
-                    </AppButton>
+                    <InfoTip text="Pick a Steam branch. Changing branch later can corrupt an existing world, so this is an install-time choice." />
                   </span>
-                  {showBranchHelp && (
-                    <div className="absolute left-0 top-full z-20 mt-2 w-[280px] max-w-[calc(100vw-4rem)]">
-                      <div className="absolute -top-1.5 left-4 h-3 w-3 rotate-45 border-l border-t border-gray-700/80 bg-gp-surface-input" />
-                      <div className="relative rounded-xl border border-gray-700/80 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(11,18,32,0.98))] px-3.5 py-3 text-xs font-normal normal-case tracking-normal leading-relaxed text-gray-300 shadow-[0_18px_40px_rgba(2,6,23,0.45)] backdrop-blur-sm">
-                        Pick a Steam branch. Changing branch later can corrupt an existing world, so this is an install-time choice.
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <AppSelect
@@ -629,27 +625,11 @@ function ConfigModal({
               </div>
 
               <div>
-                <div className="relative mb-2 flex">
+                <div className="mb-2 flex">
                   <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Admin Password
-                    <AppButton
-                      tone="ghost"
-                      aria-label="About the admin password"
-                      aria-expanded={showAdminHelp}
-                      onClick={() => setShowAdminHelp((v) => !v)}
-                      className="inline-flex h-5 shrink-0 items-center justify-center px-0.5 text-[var(--color-cyan-400)]/80 transition-colors hover:text-[var(--color-cyan-400)]"
-                    >
-                      <Info className="h-3.5 w-3.5" />
-                    </AppButton>
+                    <InfoTip text="In-game admin account password (to run privileged console commands). This is not the server join password. Leave empty to let the panel generate one. You can change it later in Container Settings." />
                   </span>
-                  {showAdminHelp && (
-                    <div className="absolute left-0 top-full z-20 mt-2 w-[280px] max-w-[calc(100vw-4rem)]">
-                      <div className="absolute -top-1.5 left-4 h-3 w-3 rotate-45 border-l border-t border-gray-700/80 bg-gp-surface-input" />
-                      <div className="relative rounded-xl border border-gray-700/80 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(11,18,32,0.98))] px-3.5 py-3 text-xs font-normal normal-case tracking-normal leading-relaxed text-gray-300 shadow-[0_18px_40px_rgba(2,6,23,0.45)] backdrop-blur-sm">
-                        In-game admin account password (to run privileged console commands). This is not the server join password. Leave empty to let the panel generate one. You can change it later in Container Settings.
-                      </div>
-                    </div>
-                  )}
                 </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -679,6 +659,50 @@ function ConfigModal({
                     Regenerate
                   </button>
                 </div>
+              </div>
+            </>
+          )}
+
+          {showRustFields && (
+            <>
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  RCON Password
+                  <InfoTip text="Used by the panel console (WebRCON)." />
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showRconPw ? 'text' : 'password'}
+                      value={rustRcon}
+                      onChange={(e) => setRustRcon(e.target.value)}
+                      placeholder="At least 8 characters"
+                      spellCheck={false}
+                      autoComplete="off"
+                      className={`${inputCls} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRconPw((v) => !v)}
+                      aria-label={showRconPw ? 'Hide password' : 'Show password'}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                    >
+                      {showRconPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRustRcon(generatePalworldAdminPassword())}
+                    className="flex-shrink-0 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                  >
+                    Regenerate
+                  </button>
+                </div>
+                {rustRconTooShort && (
+                  <p className="mt-1.5 text-xs text-red-400">
+                    Must be at least 8 characters.
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -900,7 +924,7 @@ function ConfigModal({
               className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/50 dark:hover:bg-gray-600/50 text-gray-700 dark:text-white border border-gray-300 dark:border-gray-600/50 transition-all">
               Cancel
             </AppButton>
-            <AppButton tone="primary" onClick={onConfirm} disabled={loading || !serverName.trim() || !!nameError || eulaBlocked}
+            <AppButton tone="primary" onClick={onConfirm} disabled={loading || !serverName.trim() || eulaBlocked || rustRconTooShort}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
               {loading ? 'Installing…' : 'Install'}
               <ArrowRight className="w-4 h-4" />
@@ -962,6 +986,7 @@ export function InstallGameServer({
   const [showHytale, setShowHytale] = useState(false);
   const [showPalworldAdmin, setShowPalworldAdmin] = useState(false);
   const [showProjectZomboid, setShowProjectZomboid] = useState(false);
+  const [showRust, setShowRust] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
   const [mountRows, setMountRows] = useState<MountRow[]>([]);
   const [healthcheckFromCatalog, setHealthcheckFromCatalog] = useState<Record<string, unknown> | null>(null);
@@ -1039,6 +1064,8 @@ export function InstallGameServer({
     setHytaleOptions({ patchline: '', profileUuid: '' });
     setShowHytale(false);
     setShowPalworldAdmin(false);
+    setShowProjectZomboid(false);
+    setShowRust(false);
     setConfigError(null);
     setMountRows([]);
     setHealthcheckFromCatalog(null);
@@ -1071,7 +1098,7 @@ export function InstallGameServer({
     setConfigTitle(`Install ${image.name}`);
     setConfigSubtitle('');
     setConfigProvider('ovhcloud');
-    setServerName(`${image.name} Server`);
+    setServerName(makeUniqueServerName(`${image.name} Server`, usedServerNames));
     setTcpPorts(ports.tcp);
     setUdpPorts(ports.udp);
     const baseEnv = envFromImage(image);
@@ -1080,7 +1107,9 @@ export function InstallGameServer({
         ? [...baseEnv, { key: 'PALWORLD_ADMIN_PASSWORD', value: generatePalworldAdminPassword() }]
         : image.family === 'project-zomboid'
           ? [...baseEnv, { key: 'PZ_ADMIN_PASSWORD', value: generatePalworldAdminPassword() }]
-          : baseEnv
+          : image.family === 'rust'
+            ? [...baseEnv, { key: 'RUST_RCON_PASSWORD', value: generatePalworldAdminPassword() }]
+            : baseEnv
     );
     setConfigShowEnv(true);
     setConfigRequireEula(image.requiredEnvKeys.includes('EULA'));
@@ -1088,8 +1117,10 @@ export function InstallGameServer({
     setHytaleOptions({ patchline: '', profileUuid: '' });
     setShowPalworldAdmin(image.family === 'palworld');
     setShowProjectZomboid(image.family === 'project-zomboid');
+    setShowRust(image.family === 'rust');
     setConfigError(null);
-    const needsBackupMount = image.family === 'minecraft' || image.family === 'project-zomboid';
+    const needsBackupMount =
+      image.family === 'minecraft' || image.family === 'project-zomboid' || image.family === 'rust';
     setMountRows(
       needsBackupMount
         ? [
@@ -1109,7 +1140,7 @@ export function InstallGameServer({
     setConfigTitle(`Install ${game.gamename}`);
     setConfigSubtitle('');
     setConfigProvider('linuxgsm');
-    setServerName(`${game.gamename} Server`);
+    setServerName(makeUniqueServerName(`${game.gamename} Server`, usedServerNames));
     setTcpPorts([]);
     setUdpPorts([]);
     setEnvRows([]);
@@ -1169,9 +1200,11 @@ export function InstallGameServer({
     }
     const cpuVal = parseFloat(cpuLimit);
     const memVal = parseInt(memoryLimitMb, 10);
+    // A duplicate name is auto-resolved to "<name> (n)" rather than blocking creation.
+    const uniqueName = makeUniqueServerName(serverName.trim(), usedServerNames);
     const payload: InstallGameHandlerPayload = {
       ...pendingPayloadBase as any,
-      name: serverName.trim(),
+      name: uniqueName,
       ports: { tcp: parsePortRows(tcpPorts), udp: parsePortRows(udpPorts) },
       healthcheck: healthcheckEdit as any ?? null,
       mounts: mountRows.filter((m) => m.key.trim() && m.containerPath.trim()),
@@ -1181,7 +1214,7 @@ export function InstallGameServer({
       resourceLimits: (cpuVal > 0 || memVal > 0) ? { cpu: cpuVal > 0 ? cpuVal : 0, memoryMb: memVal > 0 ? memVal : 0 } : null,
     };
     setInstallWasExternal(false);
-    setInstallingName(serverName.trim());
+    setInstallingName(uniqueName);
     setShowConfig(false);
     setShowInstallModal(true);
     onClose();
@@ -1192,7 +1225,6 @@ export function InstallGameServer({
     setExtError(null);
     if (!extDockerImage.trim()) { setExtError('Docker image is required.'); return; }
     if (!extServerName.trim()) { setExtError('Server name is required.'); return; }
-    if (usedServerNames?.includes(extServerName.trim())) { setExtError('A server with this name already exists.'); return; }
     if (hasIncompletePortRow(extTcpPorts) || hasIncompletePortRow(extUdpPorts)) {
       setExtError('Each port row must have both a Host port and a Container port. Complete it or remove the row.');
       return;
@@ -1209,9 +1241,11 @@ export function InstallGameServer({
     }
     const extCpuVal = parseFloat(extCpuLimit);
     const extMemVal = parseInt(extMemoryLimitMb, 10);
+    // A duplicate name is auto-resolved to "<name> (n)" rather than blocking creation.
+    const uniqueExtName = makeUniqueServerName(extServerName.trim(), usedServerNames);
     const payload: InstallGameHandlerPayload = {
       provider: 'external',
-      name: extServerName.trim(),
+      name: uniqueExtName,
       dockerImage: extDockerImage.trim(),
       ports: { tcp: parsePortRows(extTcpPorts), udp: parsePortRows(extUdpPorts) },
       healthcheck: extHealthcheck as any ?? null,
@@ -1221,7 +1255,7 @@ export function InstallGameServer({
       resourceLimits: (extCpuVal > 0 || extMemVal > 0) ? { cpu: extCpuVal > 0 ? extCpuVal : 0, memoryMb: extMemVal > 0 ? extMemVal : 0 } : null,
     };
     setInstallWasExternal(true);
-    setInstallingName(extServerName.trim());
+    setInstallingName(uniqueExtName);
     setShowInstallModal(true);
     onClose();
     await onInstall(payload);
@@ -1455,7 +1489,8 @@ export function InstallGameServer({
                           <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                             Server Name <span className="text-red-400">*</span>
                           </label>
-                          <input type="text" value={extServerName} onChange={(e) => setExtServerName(e.target.value)}
+                          <input type="text" value={extServerName}
+                            onChange={(e) => setExtServerName(makeUniqueServerName(e.target.value, usedServerNames))}
                             placeholder="My Custom Server" className={inputCls} />
                         </div>
                       </div>
@@ -1652,6 +1687,7 @@ export function InstallGameServer({
           setHytaleOptions={showHytale ? setHytaleOptions : undefined}
           showPalworldAdmin={showPalworldAdmin}
           showProjectZomboidFields={showProjectZomboid}
+          showRustFields={showRust}
           usedServerNames={usedServerNames}
           requireSteamCredentials={requireSteamCredentials || undefined}
           steamUsername={steamUsername}

@@ -73,52 +73,6 @@ is_cs2_server_running() {
   kill -0 "${RUNNING_PID}" 2>/dev/null
 }
 
-gameserver_meta_file() {
-  printf '%s\n' "${GAMESERVER_META_FILE:-${DATA_DIR:-/data}/.gameserver-meta.json}"
-}
-
-server_binary_relative_to_data() {
-  case "${CS2_SERVER_BIN:-}" in
-    "${DATA_DIR:-/data}"/*)
-      printf '%s\n' "${CS2_SERVER_BIN#${DATA_DIR}/}"
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-}
-
-write_gameserver_metadata() {
-  META_FILE="$(gameserver_meta_file)"
-  META_DIR="$(dirname "${META_FILE}")"
-  ARTIFACT_PATH="$(server_binary_relative_to_data || printf '%s\n' "${CS2_SERVER_BIN:-}")"
-
-  mkdir -p "${META_DIR}"
-  META_TMP="$(mktemp "${META_DIR}/.gameserver-meta.XXXXXX")"
-
-  jq -n \
-    --arg serverType "${GAMESERVER_SERVER_TYPE:-counter-strike-2}" \
-    --arg steamAppId "${CS2_STEAM_APP_ID:-730}" \
-    --arg installDir "${CS2_INSTALL_DIR:-/data/server}" \
-    --arg artifactPath "${ARTIFACT_PATH}" '
-      {
-        schemaVersion: 1,
-        serverType: $serverType,
-        steam: {
-          appId: (($steamAppId | tonumber?) // $steamAppId)
-        },
-        install: {
-          path: $installDir
-        },
-        artifact: {
-          path: $artifactPath
-        }
-      }
-    ' > "${META_TMP}"
-
-  mv "${META_TMP}" "${META_FILE}"
-}
-
 curl_to_stdout() {
   CURL_URL="$1"
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, ChevronDown, Eye, EyeOff, HelpCircle, Loader2, Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
-import { AppButton, AppToggle } from '../../src/ui/components';
+import { AlertTriangle, Check, ChevronDown, Eye, EyeOff, Loader2, Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { AppButton, AppToggle, InfoTip } from '../../src/ui/components';
 import { apiClient } from '../../utils/api';
 import { parseCs2Params, serializeCs2Params } from '../../utils/cs2Params';
 import { CS2FrameworksSection } from './CS2FrameworksTab';
@@ -241,28 +241,10 @@ function ComboInput({
 }
 
 function FieldLabel({ label, tooltip }: { label: string; tooltip?: string }) {
-  const [show, setShow] = useState(false);
   return (
-    <div className="relative flex items-center gap-1.5 mb-1.5">
+    <div className="flex items-center gap-1.5 mb-1.5">
       <span className="block text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
-      {tooltip && (
-        <>
-          <button
-            type="button"
-            className="text-gray-400 hover:text-gray-300 transition-colors"
-            onMouseEnter={() => setShow(true)}
-            onMouseLeave={() => setShow(false)}
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-          </button>
-          {show && (
-            <div className="absolute bottom-full left-0 mb-2 w-72 max-w-[calc(100vw-3rem)] z-20 bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded-lg px-3 py-2 shadow-xl break-words">
-              {tooltip}
-              <div className="absolute top-full left-3 border-4 border-transparent border-t-gray-700" />
-            </div>
-          )}
-        </>
-      )}
+      {tooltip && <InfoTip text={tooltip} />}
     </div>
   );
 }

@@ -14,11 +14,13 @@ import serverMembersRoutes from './routes/serverMembers.js';
 import serverRoutes from './routes/servers.js';
 import systemRoutes from './routes/system.js';
 import catalogRoutes from './routes/catalog.js';
+import downloadRoutes from './routes/download.js';
 import { setupWebSocket } from './websocket/handler.js';
 import { getAppVersion } from './utils/appInfo.js';
 import { logError, logInfo } from './utils/logger.js';
 import { startLinuxGsmManifestRefreshJob } from './services/linuxGsmManifest.js';
 import { startFileTransferCleanupJob } from './services/fileTransfers.js';
+import { startDownloadTokenCleanupJob } from './services/downloadTokens.js';
 import { startScheduledTaskRunner } from './services/scheduledTasks.js';
 import { reconcileStalePanelUpdate } from './services/panelUpdates.js';
 import { nowIso } from './utils/time.js';
@@ -48,6 +50,7 @@ let dockerHealthListener: { stop: () => void } | null = null;
 let periodicHealthReconcile: { stop: () => void } | null = null;
 let linuxGsmRefreshJob: { stop: () => void } | null = null;
 let fileTransferCleanupJob: { stop: () => void } | null = null;
+let downloadTokenCleanupJob: { stop: () => void } | null = null;
 let scheduledTaskRunner: { stop: () => void } | null = null;
 
 const corsOptions: CorsOptions = {
@@ -80,6 +83,8 @@ app.use(express.urlencoded({ extended: true, limit: API_BODY_LIMIT }));
 
 // /api/auth
 app.use('/api/auth', authRoutes);
+// /api/download/:token
+app.use('/api/download', downloadRoutes);
 // /api/users
 app.use('/api/users', authMiddleware, userRoutes);
 // /api/servers/:id/members
@@ -138,6 +143,7 @@ async function startServer(): Promise<void> {
     periodicHealthReconcile = startPeriodicHealthReconcile();
     linuxGsmRefreshJob = startLinuxGsmManifestRefreshJob();
     fileTransferCleanupJob = startFileTransferCleanupJob();
+    downloadTokenCleanupJob = startDownloadTokenCleanupJob();
     scheduledTaskRunner = startScheduledTaskRunner();
 
     httpServer.listen(port, () => {
@@ -165,6 +171,7 @@ function setupGracefulShutdown(): void {
       periodicHealthReconcile?.stop();
       linuxGsmRefreshJob?.stop();
       fileTransferCleanupJob?.stop();
+      downloadTokenCleanupJob?.stop();
       scheduledTaskRunner?.stop();
 
       // 2) Close WebSocket clients then server

@@ -137,6 +137,11 @@ jobs:
             "docker-images/project-zomboid/Dockerfile"
 
           build_image \
+            "gamepanel-rust" \
+            "docker-images/rust" \
+            "docker-images/rust/Dockerfile"
+
+          build_image \
             "gamepanel-hytale-java25" \
             "docker-images/hytale" \
             "docker-images/hytale/Dockerfile"
@@ -263,6 +268,12 @@ jobs:
         uses: actions/dockerPush
         with:
           image: game-panel/gamepanel-project-zomboid:${{ cds.version }}
+          tags: "${{ cds.version }}"
+
+      - id: push-gamepanel-rust
+        uses: actions/dockerPush
+        with:
+          image: game-panel/gamepanel-rust:${{ cds.version }}
           tags: "${{ cds.version }}"
 
       - id: push-gamepanel-hytale-java25

@@ -15,6 +15,8 @@ import {
   PALWORLD_PRESETS,
   PROJECT_ZOMBOID_OVHCLOUD_OPTIONS,
   PROJECT_ZOMBOID_PRESETS,
+  RUST_OVHCLOUD_OPTIONS,
+  RUST_PRESETS,
   MINECRAFT_OVHCLOUD_OPTIONS,
   MINECRAFT_PRESETS,
   SCHEDULED_TASKS_OPTIONS,
@@ -112,6 +114,7 @@ export function UserEditDialog({
   const isHytaleOvhcloudServer = isOvhcloud && selectedServer?.catalogId === 'hytale';
   const isPalworldOvhcloudServer = isOvhcloud && selectedServer?.catalogId === 'palworld';
   const isProjectZomboidOvhcloudServer = isOvhcloud && selectedServer?.catalogId === 'project-zomboid';
+  const isRustOvhcloudServer = isOvhcloud && selectedServer?.catalogId === 'rust';
   const isExternalServer = selectedServer?.provider === 'external';
   const isBusy = saveLoading;
 
@@ -121,6 +124,7 @@ export function UserEditDialog({
     : isPalworldOvhcloudServer ? 'palworld'
     : isProjectZomboidOvhcloudServer ? 'project-zomboid'
     : isCs2OvhcloudServer ? 'counter-strike'
+    : isRustOvhcloudServer ? 'rust'
     : null;
   const supportedWipeModes = getSupportedWipeModes(wipeFamily);
   const wipeOptions = WIPE_OPTIONS.filter((opt) =>
@@ -314,6 +318,7 @@ export function UserEditDialog({
                           : isHytaleOvhcloudServer ? HYTALE_PRESETS
                           : isPalworldOvhcloudServer ? PALWORLD_PRESETS
                           : isProjectZomboidOvhcloudServer ? PROJECT_ZOMBOID_PRESETS
+                          : isRustOvhcloudServer ? RUST_PRESETS
                           : isCs2OvhcloudServer ? CS2_PRESETS
                           : null;
                         // Replace Viewer and Operator with game-enriched versions, keep Full access
@@ -573,6 +578,37 @@ export function UserEditDialog({
                         <span className="mb-2 block text-xs font-medium text-gray-400">Project Zomboid</span>
                         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
                           {PROJECT_ZOMBOID_OVHCLOUD_OPTIONS.map((opt) => {
+                            const checked = isServerPermissionChecked(addMemberKnown, opt.value);
+                            return (
+                              <AppToggle
+                                key={`server-opt-${opt.value}`}
+                                ariaLabel={opt.label}
+                                checked={checked}
+                                size="compact"
+                                onChange={() =>
+                                  setAddMemberKnown((current) =>
+                                    toggleServerPermission(current, opt.value)
+                                  )
+                                }
+                                label={opt.label}
+                                className={`w-full flex-row-reverse justify-between rounded border px-3 py-2 transition-colors ${
+                                  checked
+                                    ? 'border-[var(--color-cyan-400)]/50 bg-[#0050D7]/10'
+                                    : 'border-gray-700 bg-[#111827]'
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rust — OVHcloud only */}
+                    {isRustOvhcloudServer && (
+                      <div>
+                        <span className="mb-2 block text-xs font-medium text-gray-400">Rust</span>
+                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                          {RUST_OVHCLOUD_OPTIONS.map((opt) => {
                             const checked = isServerPermissionChecked(addMemberKnown, opt.value);
                             return (
                               <AppToggle

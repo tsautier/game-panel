@@ -679,30 +679,17 @@ class ApiClient {
     return response.data as string;
   }
 
-  async downloadServerFile(serverId: number, path: string, root?: string) {
-    const response = await this.client.get(`/api/servers/${serverId}/file`, {
-      params: { path, download: 1, ...(root ? { root } : {}) },
-      responseType: 'blob',
-      timeout: LONG_TIMEOUT_MS,
-    });
-
-    const disposition = response.headers?.['content-disposition'] as string | undefined;
-    const filename = getFilenameFromDisposition(disposition, getPathFilename(path, 'download'));
-
-    return { blob: response.data as Blob, filename };
-  }
-
-  async downloadServerPath(serverId: number, path: string, root?: string) {
-    const response = await this.client.get(`/api/servers/${serverId}/files/download`, {
-      params: { path, ...(root ? { root } : {}) },
-      responseType: 'blob',
-      timeout: LONG_TIMEOUT_MS,
-    });
-
-    const disposition = response.headers?.['content-disposition'] as string | undefined;
-    const filename = getFilenameFromDisposition(disposition, getPathFilename(path, 'download'));
-
-    return { blob: response.data as Blob, filename };
+  // Mint a single-use, short-lived download token and return the absolute, same-origin
+  // streaming URL to navigate to. The browser then downloads natively (its own progress,
+  // straight to disk — no RAM buffer, no 30-min axios timeout). Works for files and
+  // directories (server zips a directory on the fly).
+  async getServerDownloadUrl(serverId: number, path: string, root?: string): Promise<string> {
+    const res = await this.client.post(
+      `/api/servers/${serverId}/files/download-token`,
+      { path, ...(root ? { root } : {}) }
+    );
+    // res.data.path is root-relative ("/api/download/<token>"); prefix the origin.
+    return `${API_BASE_URL}${res.data.path as string}`;
   }
 
   async updateServerFile(serverId: number, path: string, content: string, root?: string) {
@@ -1257,6 +1244,59 @@ class ApiClient {
 
   async deleteMinecraftAddons(serverId: number, paths: string[]) {
     const response = await this.client.delete(`/api/servers/${serverId}/minecraft/addons`, {
+      data: { paths },
+    });
+    return response.data;
+  }
+
+  // ── Rust OVHcloud ─────────────────────────────────────────────────────────
+
+  // server.cfg convars — generic file-settings, editable anytime (no stop-first guard).
+  async getRustSettings(serverId: number) {
+    const response = await this.client.get(`/api/servers/${serverId}/rust/settings`);
+    return response.data as {
+      settings: Array<{
+        key: string; label: string; description: string;
+        type: 'integer' | 'boolean' | 'string' | 'float' | 'select';
+        options?: Array<{ label: string; value: string }> | string[];
+        min?: number; max?: number;
+        value: string | number | boolean;
+      }>;
+    };
+  }
+
+  async patchRustSettings(serverId: number, settings: Record<string, string | number | boolean>) {
+    const response = await this.client.patch(`/api/servers/${serverId}/rust/settings`, { settings });
+    return response.data as { updated: string[]; settings: Array<unknown> };
+  }
+
+  // Oxide framework (single framework — like CS2 frameworks but simpler).
+  async getRustFrameworks(serverId: number) {
+    const response = await this.client.get(`/api/servers/${serverId}/rust/frameworks`);
+    return response.data as { frameworks: { oxideInstalled: boolean } };
+  }
+
+  async installRustOxide(serverId: number, options?: { version?: string }) {
+    const response = await this.client.post(`/api/servers/${serverId}/rust/oxide/install`, options ?? {}, {
+      timeout: LONG_TIMEOUT_MS,
+    });
+    return response.data as { ok: boolean; exitCode: number; stdout: string; stderr: string; restarted: boolean };
+  }
+
+  // Oxide plugin files — scoped file area (same shape as Hytale/Minecraft mods).
+  async listRustMods(serverId: number) {
+    const response = await this.client.get(`/api/servers/${serverId}/rust/mods`);
+    return response.data as {
+      entries: Array<{ name: string; type: string; size: number; modifiedAt: string }>;
+    };
+  }
+
+  async uploadRustMod(serverId: number, file: File, onProgress?: (percent: number) => void) {
+    return this.uploadModFile(serverId, file, 'rust/mods', onProgress);
+  }
+
+  async deleteRustMods(serverId: number, paths: string[]) {
+    const response = await this.client.delete(`/api/servers/${serverId}/rust/mods`, {
       data: { paths },
     });
     return response.data;

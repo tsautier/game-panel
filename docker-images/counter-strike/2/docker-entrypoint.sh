@@ -84,17 +84,42 @@ install_or_update_cs2() {
   STEAMCMD_MAX_ATTEMPTS="${STEAMCMD_MAX_ATTEMPTS:-5}"
   STEAMCMD_RETRY_DELAY_SECONDS="${STEAMCMD_RETRY_DELAY_SECONDS:-10}"
   ATTEMPT=1
+  STEAMCMD_OUTPUT="$(mktemp "${RUNTIME_DIR}/steamcmd-output.XXXXXX")"
+  STEAMCMD_EXIT_CODE_FILE="${STEAMCMD_OUTPUT}.exit-code"
 
   while :; do
-    if "$@"; then
+    : > "${STEAMCMD_OUTPUT}"
+    rm -f "${STEAMCMD_EXIT_CODE_FILE}"
+
+    (
+      set +e
+      "$@"
+      printf '%s\n' "$?" > "${STEAMCMD_EXIT_CODE_FILE}"
+    ) 2>&1 | tee "${STEAMCMD_OUTPUT}"
+
+    if [ ! -f "${STEAMCMD_EXIT_CODE_FILE}" ]; then
+      rm -f "${STEAMCMD_OUTPUT}"
+      die "SteamCMD exit code could not be determined."
+    fi
+
+    STEAMCMD_EXIT_CODE="$(cat "${STEAMCMD_EXIT_CODE_FILE}")"
+
+    if [ "${STEAMCMD_EXIT_CODE}" -eq 0 ]; then
+      rm -f "${STEAMCMD_OUTPUT}" "${STEAMCMD_EXIT_CODE_FILE}"
       break
     fi
 
-    if [ "${ATTEMPT}" -ge "${STEAMCMD_MAX_ATTEMPTS}" ]; then
-      die "SteamCMD failed after ${ATTEMPT} attempt(s)."
+    if ! grep -Fq "Failed to install app '${CS2_STEAM_APP_ID}' (Missing configuration)" "${STEAMCMD_OUTPUT}"; then
+      rm -f "${STEAMCMD_OUTPUT}" "${STEAMCMD_EXIT_CODE_FILE}"
+      die "SteamCMD failed with exit code ${STEAMCMD_EXIT_CODE}."
     fi
 
-    log "SteamCMD attempt ${ATTEMPT}/${STEAMCMD_MAX_ATTEMPTS} failed (known transient SteamCMD 'Missing configuration' error on a cold cache); retrying in ${STEAMCMD_RETRY_DELAY_SECONDS}s..."
+    if [ "${ATTEMPT}" -ge "${STEAMCMD_MAX_ATTEMPTS}" ]; then
+      rm -f "${STEAMCMD_OUTPUT}" "${STEAMCMD_EXIT_CODE_FILE}"
+      die "SteamCMD failed after ${ATTEMPT} attempt(s) with the known transient 'Missing configuration' error."
+    fi
+
+    log "SteamCMD attempt ${ATTEMPT}/${STEAMCMD_MAX_ATTEMPTS} failed with the known transient 'Missing configuration' error; retrying in ${STEAMCMD_RETRY_DELAY_SECONDS}s..."
     ATTEMPT=$((ATTEMPT + 1))
     sleep "${STEAMCMD_RETRY_DELAY_SECONDS}"
   done
@@ -111,8 +136,6 @@ fi
 if metamod_is_installed; then
   ensure_metamod_gameinfo_entry
 fi
-
-write_gameserver_metadata
 
 export DATA_DIR
 export CS2_INSTALL_DIR

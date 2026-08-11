@@ -30,9 +30,8 @@ import {
     resolveDownloadTarget,
     SMALL_UPLOAD_LIMIT_BYTES,
     startArchiveExtraction,
-    streamDirectoryZip,
-    streamFileDownload,
 } from '../services/fileTransfers.js';
+import { createDownloadToken } from '../services/downloadTokens.js';
 
 const router = Router({ mergeParams: true });
 
@@ -45,11 +44,6 @@ function getBodyRoot(body: unknown, fallbackKey = 'root'): string | undefined {
         ? body as Record<string, unknown>
         : {};
     return optionalTrimmedString(record[fallbackKey]);
-}
-
-function contentDisposition(filename: string): string {
-    const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
-    return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
 
 function handleFileRouteError(
@@ -120,33 +114,34 @@ router.get('/transfers/:jobId', requireServerPermission(PERMISSIONS.fs.read), as
     }
 });
 
-// GET /api/servers/:id/files/download
-router.get('/download', requireServerPermission(PERMISSIONS.fs.read), async (req: AuthenticatedRequest, res: Response) => {
+// POST /api/servers/:id/files/download-token
+router.post('/download-token', requireServerPermission(PERMISSIONS.fs.read), async (req: AuthenticatedRequest, res: Response) => {
     try {
         const serverId = requirePositiveInt(req.params.id, 'Invalid server id');
+        const body = requireBodyObject(req.body);
 
-        const target = await resolveDownloadTarget({
+        const root = getBodyRoot(body);
+        const apiPath = typeof body.path === 'string' && body.path.trim() ? body.path : '/';
+
+        const target = await resolveDownloadTarget({ serverId, root, path: apiPath });
+
+        const { token, expiresInMs } = createDownloadToken({
             serverId,
-            root: getQueryRoot(req.query.root),
-            path: queryString(req.query.path, '/'),
+            userId: req.user?.userId ?? 0,
+            root: target.root,
+            path: target.path,
         });
 
-        res.setHeader('Content-Disposition', contentDisposition(target.filename));
-
-        if (target.type === 'file') {
-            res.setHeader('Content-Type', target.contentType ?? 'application/octet-stream');
-            res.setHeader('Content-Length', String(target.size));
-            await streamFileDownload({ target, output: res });
-            return;
-        }
-
-        res.setHeader('Content-Type', 'application/zip');
-        await streamDirectoryZip({ target, output: res });
+        return res.status(201).json({
+            token,
+            path: `/api/download/${token}`,
+            expiresInMs,
+        });
     } catch (error) {
         return handleFileRouteError(res, error, {
-            route: 'ROUTE:FILES:DOWNLOAD',
+            route: 'ROUTE:FILES:DOWNLOAD_TOKEN',
             serverId: req.params.id,
-            fallbackMessage: 'Failed to download file',
+            fallbackMessage: 'Failed to create download token',
         });
     }
 });

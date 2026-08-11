@@ -316,7 +316,7 @@
 
   .gp-game-config-select[data-ods='select'] .gp-app-select-control[data-ods='select-control'] {
     min-height: 2.5rem;
-    border-color: #425774;
+    border-color: #55708f;
     border-radius: 0.6rem;
     background: linear-gradient(180deg, #101a2d 0%, #0b1324 100%);
     box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-cyan-400) 8%, transparent);
@@ -325,7 +325,7 @@
   }
 
   .gp-game-config-select[data-ods='select'] .gp-app-select-control[data-ods='select-control']:hover {
-    border-color: #5a7090;
+    border-color: #6f8aab;
   }
 
   .gp-game-config-select[data-ods='select']

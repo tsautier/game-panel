@@ -669,7 +669,7 @@ html:not(.dark) .gp-app-select-control[data-ods='select-control'] {
 html:not(.dark) .gp-resources-select[data-ods='select'] .gp-app-select-control[data-ods='select-control'],
 html:not(.dark) .gp-game-config-select[data-ods='select'] .gp-app-select-control[data-ods='select-control'] {
   background: #ffffff !important;
-  border-color: #c5d5ea !important;
+  border-color: #8ea0bd !important;
 }
 html:not(.dark) .gp-app-select[data-ods='select'] [data-ods='select-content'] {
   background: #ffffff !important;
@@ -693,6 +693,14 @@ html:not(.dark) .gp-resources-select[data-ods='select'] .gp-app-select-control[d
 }
 html:not(.dark) .gp-resources-select[data-ods='select'] .gp-app-select-control[data-ods='select-control'] [class*='select-value'] {
   color: #0f172a !important;
+}
+
+html:not(.dark) .gp-game-config-select[data-ods='select'] .gp-app-select-control[data-ods='select-control'] {
+  border: 1px solid #8ea0bd !important;
+  border-radius: 0.6rem !important;
+}
+html:not(.dark) .gp-game-config-select[data-ods='select'] .gp-app-select-control[data-ods='select-control']:hover {
+  border: 1px solid #6b7c99 !important;
 }
 
 /* Project Zomboid branch select — clearer control + visible selection in light mode */
@@ -1197,7 +1205,7 @@ html:not(.dark) .gp-console-terminal .text-gray-500 {
    ───────────────────────────────────────────────────── */
 
 /* Base: reset all neutral buttons inside the table to clean light style */
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-app-button--neutral[data-ods='button'] {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-app-button--neutral[data-ods='button'] {
   background: #f0f4f8 !important;
   border-color: #c5d4e3 !important;
   color: #334155 !important;
@@ -1227,19 +1235,19 @@ html:not(.dark) .gp-game-servers-table .gp-btn-console[data-ods='button']:not([d
 }
 
 /* ══ SETTINGS button ══ */
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-btn-settings[data-ods='button']:not([disabled]) {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-settings[data-ods='button']:not([disabled]) {
   background: #e8eef8 !important;
   border-color: #c5d5ea !important;
   color: #334155 !important;
 }
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-btn-settings[data-ods='button']:not([disabled]):hover {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-settings[data-ods='button']:not([disabled]):hover {
   background: #d0ddf0 !important;
   color: #1e293b !important;
 }
 
 /* Mobile-only Log/Console button (blue accent) — keep the blue background and white
    label in light mode (otherwise the global text-white remap turns the label dark). */
-html:not(.dark) .gp-game-servers-mobile .gp-btn-console-mobile[data-ods='button']:not([disabled]) {
+html:not(.dark) :is(.gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-console-mobile[data-ods='button']:not([disabled]) {
   /* Override the var the layered `.text-white` utility reads — a plain `color` would lose to it
      (layered !important beats unlayered !important regardless of specificity). */
   --gp-text-white: #ffffff;
@@ -1247,7 +1255,7 @@ html:not(.dark) .gp-game-servers-mobile .gp-btn-console-mobile[data-ods='button'
   border-color: #0050d7 !important;
   color: #ffffff !important;
 }
-html:not(.dark) .gp-game-servers-mobile .gp-btn-console-mobile[data-ods='button']:not([disabled]):hover {
+html:not(.dark) :is(.gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-console-mobile[data-ods='button']:not([disabled]):hover {
   --gp-text-white: #ffffff;
   background-color: #157eea !important;
   border-color: #157eea !important;
@@ -1256,12 +1264,12 @@ html:not(.dark) .gp-game-servers-mobile .gp-btn-console-mobile[data-ods='button'
 
 /* Mobile-only Delete button (solid red) — keep it red with a white icon in light mode
    (the base ODS button surface would otherwise win and render it grey). */
-html:not(.dark) .gp-game-servers-mobile .gp-btn-delete[data-ods='button']:not([disabled]) {
+html:not(.dark) :is(.gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-delete[data-ods='button']:not([disabled]) {
   background-color: #dc2626 !important;
   border-color: #dc2626 !important;
   color: #ffffff !important;
 }
-html:not(.dark) .gp-game-servers-mobile .gp-btn-delete[data-ods='button']:not([disabled]):hover {
+html:not(.dark) :is(.gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-delete[data-ods='button']:not([disabled]):hover {
   background-color: #ef4444 !important;
   border-color: #ef4444 !important;
   color: #ffffff !important;
@@ -1270,78 +1278,78 @@ html:not(.dark) .gp-game-servers-mobile .gp-btn-delete[data-ods='button']:not([d
 /* Mobile list — semantic icon/text colors the base ODS button surface would otherwise
    neutralize in light mode (e.g. the rename save ✓ / cancel ✗ icon buttons). The more
    specific status/power rules above still win where they apply. */
-html:not(.dark) .gp-game-servers-mobile .text-green-400 { color: #15803d !important; }
-html:not(.dark) .gp-game-servers-mobile .text-red-400 { color: #dc2626 !important; }
+html:not(.dark) :is(.gp-game-servers-mobile, .gp-game-servers-grid) .text-green-400 { color: #15803d !important; }
+html:not(.dark) :is(.gp-game-servers-mobile, .gp-game-servers-grid) .text-red-400 { color: #dc2626 !important; }
 
 /* ══ POWER icon buttons ══ */
 /* Stop (red tint) */
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-btn-power[data-ods='button'].bg-red-600\/10 {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-power[data-ods='button'].bg-red-600\/10 {
   background: rgba(220, 38, 38, 0.10) !important;
   border-color: rgba(220, 38, 38, 0.55) !important;
   color: #dc2626 !important;
 }
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-btn-power[data-ods='button'].bg-red-600\/10:hover {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-power[data-ods='button'].bg-red-600\/10:hover {
   background: #ef4444 !important;
   border-color: #dc2626 !important;
   color: #ffffff !important;
 }
 /* Start (green tint) */
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-btn-power[data-ods='button'].bg-green-600\/10 {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-power[data-ods='button'].bg-green-600\/10 {
   background: rgba(22, 163, 74, 0.14) !important;
   border-color: rgba(22, 163, 74, 0.55) !important;
   color: #15803d !important;
 }
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-btn-power[data-ods='button'].bg-green-600\/10:hover {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-power[data-ods='button'].bg-green-600\/10:hover {
   background: #22c55e !important;
   border-color: #16a34a !important;
   color: #ffffff !important;
 }
 /* Restart (orange tint) */
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-btn-power[data-ods='button'].bg-orange-600\/10 {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-power[data-ods='button'].bg-orange-600\/10 {
   background: rgba(194, 65, 12, 0.10) !important;
   border-color: rgba(194, 65, 12, 0.55) !important;
   color: #c2410c !important;
 }
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-btn-power[data-ods='button'].bg-orange-600\/10:hover {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-btn-power[data-ods='button'].bg-orange-600\/10:hover {
   background: #f97316 !important;
   border-color: #ea580c !important;
   color: #ffffff !important;
 }
 
 /* ══ DISABLED (all) — comes last, uses [disabled] only ══ */
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-app-button--neutral[data-ods='button'][disabled] {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-app-button--neutral[data-ods='button'][disabled] {
   background: #f1f5f9 !important;
   border-color: #e2e8f0 !important;
   color: #94a3b8 !important;
 }
 
 /* ══ STATUS BADGES ══ */
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-status-badge[data-ods='button'].text-green-400 {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-status-badge[data-ods='button'].text-green-400 {
   background: rgba(22, 163, 74, 0.10) !important;
   border-color: rgba(22, 163, 74, 0.38) !important;
   color: #15803d !important;
 }
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-status-badge[data-ods='button'].text-red-400 {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-status-badge[data-ods='button'].text-red-400 {
   background: rgba(220, 38, 38, 0.08) !important;
   border-color: rgba(220, 38, 38, 0.32) !important;
   color: #dc2626 !important;
 }
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-status-badge[data-ods='button'].text-blue-300 {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-status-badge[data-ods='button'].text-blue-300 {
   background: rgba(37, 99, 235, 0.08) !important;
   border-color: rgba(37, 99, 235, 0.32) !important;
   color: #1d4ed8 !important;
 }
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-status-badge[data-ods='button'].text-cyan-300 {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-status-badge[data-ods='button'].text-cyan-300 {
   background: rgba(0, 14, 156, 0.08) !important;
   border-color: rgba(0, 14, 156, 0.32) !important;
   color: #000e9c !important;
 }
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-status-badge[data-ods='button'].text-orange-300 {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-status-badge[data-ods='button'].text-orange-300 {
   background: rgba(194, 65, 12, 0.08) !important;
   border-color: rgba(194, 65, 12, 0.32) !important;
   color: #c2410c !important;
 }
-html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile) .gp-status-badge[data-ods='button'].text-yellow-300 {
+html:not(.dark) :is(.gp-game-servers-table, .gp-game-servers-mobile, .gp-game-servers-grid) .gp-status-badge[data-ods='button'].text-yellow-300 {
   background: rgba(180, 83, 9, 0.08) !important;
   border-color: rgba(180, 83, 9, 0.32) !important;
   color: #b45309 !important;

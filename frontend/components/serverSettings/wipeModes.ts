@@ -18,13 +18,13 @@ export interface WipeModeInfo {
 }
 
 // OVHcloud family → supported modes. Keep in sync with the backend adapters.
-// Valheim will be added once its branch merges.
 const MODES_BY_FAMILY: Record<string, WipeMode[]> = {
   minecraft: ['soft', 'hard'],
   hytale: ['soft'],
   'counter-strike': ['hard'],
   palworld: ['soft', 'hard'],
   'project-zomboid': ['soft', 'hard'],
+  rust: ['soft', 'hard'],
 };
 
 // Modes a game supports, regardless of permissions (used by the role UI to decide
@@ -54,6 +54,11 @@ const SOFT_COPY: Record<string, { description: string; deleted: string[]; kept: 
     description: 'Reset the world and player data, keeping the server setup. A fresh world is generated on the next start.',
     deleted: ['World save & player data'],
     kept: ['Server config (settings)', 'Whitelist & bans', 'Backups'],
+  },
+  rust: {
+    description: 'Reset the world and all player data, keeping the server setup. A fresh map is generated on the next start.',
+    deleted: ['World save (map + all player data)'],
+    kept: ['Server config (cfg/)', 'Oxide + installed plugins & their data', 'Backups'],
   },
 };
 

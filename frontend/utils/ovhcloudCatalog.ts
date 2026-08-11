@@ -8,7 +8,7 @@ export interface OvhcloudPort {
 export interface OvhcloudImage {
   imageId: string;
   name: string;
-  family: 'minecraft' | 'counter-strike' | 'hytale' | 'palworld' | 'project-zomboid';
+  family: 'minecraft' | 'counter-strike' | 'hytale' | 'palworld' | 'project-zomboid' | 'rust';
   dockerImage: string;
   defaultTcpPorts: OvhcloudPort[];
   defaultUdpPorts: OvhcloudPort[];
@@ -181,6 +181,24 @@ export const OVHCLOUD_IMAGES: OvhcloudImage[] = [
       { port: 16262, label: 'Direct Connect' },
     ],
     defaultEnv: { PZ_UPDATE_ON_START: 'false' },
+    requiredEnvKeys: [],
+    supportsHytaleOptions: false,
+  },
+
+  // --- Rust ---
+  // WebRCON (28016/tcp) is intentionally NOT published: the panel reaches RCON from
+  // inside the container. Users can add that mapping manually for an external tool.
+  {
+    imageId: 'rust',
+    name: 'Rust',
+    family: 'rust',
+    dockerImage: ovhImage('gamepanel-rust'),
+    defaultTcpPorts: [{ port: 28082, label: 'Rust+ companion app' }],
+    defaultUdpPorts: [
+      { port: 28015, label: 'Game' },
+      { port: 28017, label: 'Steam Query' },
+    ],
+    defaultEnv: {},
     requiredEnvKeys: [],
     supportsHytaleOptions: false,
   },

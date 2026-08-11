@@ -90,6 +90,17 @@ export const PERMISSIONS = {
             write: 'project-zomboid.mods.write',
         },
     },
+    rust: {
+        frameworksWrite: 'rust.frameworks.write',
+        settings: {
+            read: 'rust.settings.read',
+            write: 'rust.settings.write',
+        },
+        mods: {
+            read: 'rust.mods.read',
+            write: 'rust.mods.write',
+        },
+    },
 } as const;
 
 function collectPermissionStrings(node: unknown, acc: Set<string>): void {

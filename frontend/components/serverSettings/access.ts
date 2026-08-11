@@ -60,6 +60,13 @@ export interface ServerSettingsAccess {
   canReadProjectZomboidMods: boolean;
   canWriteProjectZomboidMods: boolean;
   canUseProjectZomboid: boolean;
+  // Rust
+  canReadRustSettings: boolean;
+  canWriteRustSettings: boolean;
+  canReadRustMods: boolean;
+  canWriteRustMods: boolean;
+  canWriteRustFrameworks: boolean;
+  canUseRust: boolean;
   // Generic wipe (all OVHcloud games)
   canWipeSoft: boolean;
   canWipeHard: boolean;
@@ -151,6 +158,16 @@ export function createServerSettingsAccess(
     canReadProjectZomboidSettings || canWriteProjectZomboidSettings ||
     canReadProjectZomboidMods || canWriteProjectZomboidMods || canWipeAny;
 
+  // Rust
+  const canReadRustSettings = hasServerPermission('rust.settings.read');
+  const canWriteRustSettings = hasServerPermission('rust.settings.write');
+  const canReadRustMods = hasServerPermission('rust.mods.read');
+  const canWriteRustMods = hasServerPermission('rust.mods.write');
+  const canWriteRustFrameworks = hasServerPermission('rust.frameworks.write');
+  const canUseRust =
+    canReadRustSettings || canWriteRustSettings ||
+    canReadRustMods || canWriteRustMods || canWriteRustFrameworks || canWipeAny;
+
   // CS2
   const canWriteCS2Frameworks = hasServerPermission('cs2.frameworks.write');
 
@@ -216,6 +233,12 @@ export function createServerSettingsAccess(
     canReadProjectZomboidMods,
     canWriteProjectZomboidMods,
     canUseProjectZomboid,
+    canReadRustSettings,
+    canWriteRustSettings,
+    canReadRustMods,
+    canWriteRustMods,
+    canWriteRustFrameworks,
+    canUseRust,
     canWipeSoft,
     canWipeHard,
     canWriteCS2Frameworks,

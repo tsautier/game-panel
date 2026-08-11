@@ -450,7 +450,7 @@ export function GameServersDesktopTable({
                           ? 'Open history logs'
                           : 'Missing permission: container.logs.read'
                     }
-                    className={`gp-status-badge inline-flex items-center justify-center rounded-full border px-4 py-1 text-sm font-semibold leading-none tracking-[0.04em] transition-colors ${statusClassName} ${
+                    className={`gp-status-badge inline-flex items-center justify-center rounded-full border px-4 py-1 text-sm font-semibold leading-none tracking-[0.04em] [text-indent:0.04em] transition-colors ${statusClassName} ${
                       canReadLogs ? 'hover:brightness-110' : 'opacity-60 cursor-not-allowed'
                     }`}
                   >

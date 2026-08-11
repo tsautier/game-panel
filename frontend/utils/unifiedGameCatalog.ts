@@ -39,9 +39,15 @@ export const OVH_UNIFIED: OvhUnifiedEntry[] = [
     hasVersionSelection: false,
     images: OVHCLOUD_IMAGES.filter(img => img.family === 'project-zomboid'),
   },
+  {
+    id: 'rust',
+    displayName: 'Rust',
+    hasVersionSelection: false,
+    images: OVHCLOUD_IMAGES.filter(img => img.family === 'rust'),
+  },
 ];
 
-const LGSM_SUPPRESS_SHORTNAMES = new Set(['cs2', 'mc', 'mcb', 'pmc', 'pw', 'pz']);
+const LGSM_SUPPRESS_SHORTNAMES = new Set(['cs2', 'mc', 'mcb', 'pmc', 'pw', 'pz', 'rust']);
 
 export function filterLgsmForUnified(games: LinuxGsmGame[]): LinuxGsmGame[] {
   return games.filter(g => !LGSM_SUPPRESS_SHORTNAMES.has(g.shortname));

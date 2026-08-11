@@ -90,6 +90,14 @@ export const PROJECT_ZOMBOID_OVHCLOUD_OPTIONS = [
   { value: 'project-zomboid.mods.write', label: 'Manage mods' },
 ];
 
+export const RUST_OVHCLOUD_OPTIONS = [
+  { value: 'rust.settings.read', label: 'View game config' },
+  { value: 'rust.settings.write', label: 'Edit game config' },
+  { value: 'rust.mods.read', label: 'View mods' },
+  { value: 'rust.mods.write', label: 'Manage mods' },
+  { value: 'rust.frameworks.write', label: 'Manage frameworks' },
+];
+
 // Per-server permissions the backend accepts for a member; must not contain the `*` wildcard.
 export const ASSIGNABLE_SERVER_PERMISSIONS: string[] = [
   ...SERVER_OPTIONS,
@@ -98,6 +106,7 @@ export const ASSIGNABLE_SERVER_PERMISSIONS: string[] = [
   ...HYTALE_OVHCLOUD_OPTIONS,
   ...PALWORLD_OVHCLOUD_OPTIONS,
   ...PROJECT_ZOMBOID_OVHCLOUD_OPTIONS,
+  ...RUST_OVHCLOUD_OPTIONS,
 ].map((option) => option.value);
 
 export const SERVER_PRESETS = [
@@ -225,6 +234,27 @@ export const PROJECT_ZOMBOID_PRESETS = [
       ...BASE_OPERATOR,
       'project-zomboid.settings.read', 'project-zomboid.settings.write',
       'project-zomboid.mods.read', 'project-zomboid.mods.write',
+    ],
+  },
+];
+
+export const RUST_PRESETS = [
+  {
+    id: 'rust-viewer',
+    label: 'Rust Viewer',
+    permissions: [
+      ...BASE_VIEWER,
+      'rust.settings.read', 'rust.mods.read',
+    ],
+  },
+  {
+    id: 'rust-operator',
+    label: 'Rust Operator',
+    permissions: [
+      ...BASE_OPERATOR,
+      'rust.settings.read', 'rust.settings.write',
+      'rust.mods.read', 'rust.mods.write',
+      'rust.frameworks.write',
     ],
   },
 ];

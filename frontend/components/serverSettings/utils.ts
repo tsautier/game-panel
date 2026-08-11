@@ -77,6 +77,32 @@ export const splitFilePath = (fullPath: string) => {
 export const isSymlinkEntry = (file: { type?: string } | null | undefined): boolean =>
   file?.type === 'symlink';
 
+// Read a server's container env into a flat map, tolerating the shapes the API may
+// return it in: an object, a KEY=VALUE string array, or a JSON-encoded string of either.
+export const envFromServer = (server: unknown): Record<string, string> => {
+  const raw = (server as any)?.env ?? (server as any)?.env_json ?? {};
+  const parsed: Record<string, string> = {};
+  const fromArray = (arr: unknown[]) => {
+    for (const item of arr) {
+      if (typeof item !== 'string') continue;
+      const idx = item.indexOf('=');
+      if (idx >= 0) parsed[item.slice(0, idx)] = item.slice(idx + 1);
+    }
+  };
+  if (typeof raw === 'string') {
+    try {
+      const decoded = JSON.parse(raw);
+      if (Array.isArray(decoded)) fromArray(decoded);
+      else if (decoded && typeof decoded === 'object') Object.assign(parsed, decoded);
+    } catch { /* empty */ }
+  } else if (Array.isArray(raw)) {
+    fromArray(raw);
+  } else if (raw && typeof raw === 'object') {
+    Object.assign(parsed, raw as Record<string, string>);
+  }
+  return parsed;
+};
+
 export const getApiErrorMessage = (error: any): string => {
   const responseData = error?.response?.data;
   if (typeof responseData === 'string' && responseData.trim()) return responseData;

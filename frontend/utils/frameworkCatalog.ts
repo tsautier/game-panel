@@ -24,3 +24,8 @@ export async function fetchCounterStrikeSharpVersions(): Promise<FrameworkVersio
   const data = await catalogGet<{ versions: FrameworkVersion[] }>('/counterstrikesharp/versions');
   return data?.versions ?? null;
 }
+
+export async function fetchOxideVersions(): Promise<FrameworkVersion[] | null> {
+  const data = await catalogGet<{ versions: FrameworkVersion[] }>('/oxide/versions');
+  return data?.versions ?? null;
+}

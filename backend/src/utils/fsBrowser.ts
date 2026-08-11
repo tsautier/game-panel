@@ -127,6 +127,11 @@ export function getBasenameFromApiPath(apiPath: string): string {
     return path.posix.basename(apiPath === '/' ? 'file' : apiPath);
 }
 
+export function contentDispositionAttachment(filename: string): string {
+    const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
+    return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
+
 export function guessContentTypeByName(name: string): string {
     const n = name.toLowerCase();
 

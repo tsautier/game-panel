@@ -1,6 +1,27 @@
 # 📋 Changelog
 
-## v1.2.0 — 2026-07-30
+## v1.3.0 — 2026-08-12
+
+Adds **Rust**, a **Grid view** for the server list, and **native browser downloads** in the File Manager.
+
+### ✨ Added
+
+- **Rust** — new OVHcloud game server image with full panel integration: installation, game settings, console commands, backups & restore, soft and hard wipe, and Oxide/uMod installation with plugin management.
+- **Grid view for game servers** — switch the server list between the classic table and a card grid; the choice is remembered across sessions.
+
+### 🔧 Changed
+
+- **File Manager — downloads** — files and folders are now downloaded natively by the browser through a single-use link instead of being buffered in the page: real download progress, no size ceiling, and no more failures on large folder archives.
+- **Duplicate server names** — a name already in use no longer blocks the install form: it is automatically suffixed with ` (1)`, ` (2)`… so deploying several servers for the same game just works.
+- Minor UI polish and consistency improvements.
+
+### 🐛 Fixed
+
+- **Steam-based installs** — the automatic retry now only applies to the transient SteamCMD "Missing configuration" error; any other SteamCMD failure now stops immediately with its exit code instead of being retried in a loop (Counter-Strike 2, Palworld, Project Zomboid, Rust).
+- **Project Zomboid — Advanced Configuration** — the configuration links pointed at the `servertest` files whatever the server's actual name; they now follow it, and also expose the spawn points and spawn regions files.
+- Various minor UI and console fixes.
+
+## v1.2.0 — 2026-07-29
 
 Adds **Project Zomboid**, a generic **server wipe**, and **archive extraction** in the File Manager.
 
