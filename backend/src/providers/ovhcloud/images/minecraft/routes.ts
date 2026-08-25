@@ -3,16 +3,29 @@ import { actionsRepository, serverRepository } from '../../../../database/index.
 import { type AuthenticatedRequest, requireServerPermission } from '../../../../middleware/auth.js';
 import type { GameServerRow } from '../../../../types/gameServer.js';
 import {
+    boundedInt,
+    optionalQueryString,
     optionalString,
     requireBodyObject,
     requirePositiveInt,
     requireRecord,
+    requireTrimmedString,
 } from '../../../../utils/httpValidation.js';
 import { sendRouteError } from '../../../../utils/routeErrors.js';
 import type { GameConsoleCommandResult } from '../../../../services/gameConsole.js';
 import { PERMISSIONS } from '../../../../permissions.js';
 import { createScopedFileAreaRouter } from '../../../../routes/scopedFileArea.js';
 import { getOvhcloudMinecraftMetadata } from '../../../serverMetadata.js';
+import {
+    getMinecraftAddonProject,
+    searchMinecraftAddons,
+} from './addonsCatalog.js';
+import {
+    annotateSearchHitsWithInstalledState,
+    installMinecraftAddon,
+    listInstalledMinecraftAddons,
+    setMinecraftAddonEnabled,
+} from './addonsInstalled.js';
 import {
     listMinecraftIpBans,
     listMinecraftSettings,
@@ -139,7 +152,7 @@ router.use('/addons', createScopedFileAreaRouter({
             };
         }
 
-        if (metadata.serverType === 'fabric' || metadata.serverType === 'neoforge') {
+        if (metadata.serverType === 'fabric' || metadata.serverType === 'neoforge' || metadata.serverType === 'forge') {
             return {
                 root: 'data',
                 basePath: '/mods',
@@ -150,6 +163,124 @@ router.use('/addons', createScopedFileAreaRouter({
         throw Object.assign(new Error('Addons are not supported for this Minecraft image'), { statusCode: 501 });
     },
 }));
+
+// GET /api/servers/:id/minecraft/addons-catalog/search
+router.get('/addons-catalog/search', requireServerPermission(PERMISSIONS.minecraft.addons.read), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const serverId = routeServerId(req);
+        const server = await getServerOrThrow(serverId);
+        const result = await searchMinecraftAddons(server, {
+            query: optionalQueryString(req.query.query),
+            sort: optionalQueryString(req.query.sort),
+            category: optionalQueryString(req.query.category),
+            offset: boundedInt(req.query.offset, 0, 0, 5_000),
+            limit: boundedInt(req.query.limit, 20, 1, 50),
+            anyVersion: optionalQueryString(req.query.anyVersion) === 'true',
+        });
+        return res.json(await annotateSearchHitsWithInstalledState(server, result));
+    } catch (error) {
+        return sendRouteError(res, error, {
+            route: 'ROUTE:MINECRAFT:ADDONS_CATALOG_SEARCH',
+            logContext: { serverId: req.params.id },
+            fallbackMessage: 'Failed to search the Minecraft addon catalog',
+        });
+    }
+});
+
+// GET /api/servers/:id/minecraft/addons-catalog/installed
+router.get('/addons-catalog/installed', requireServerPermission(PERMISSIONS.minecraft.addons.read), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const serverId = routeServerId(req);
+        const server = await getServerOrThrow(serverId);
+        const result = await listInstalledMinecraftAddons(server);
+        return res.json(result);
+    } catch (error) {
+        return sendRouteError(res, error, {
+            route: 'ROUTE:MINECRAFT:ADDONS_CATALOG_INSTALLED',
+            logContext: { serverId: req.params.id },
+            fallbackMessage: 'Failed to list the installed Minecraft addons',
+        });
+    }
+});
+
+// PUT /api/servers/:id/minecraft/addons-catalog/installed/:projectId
+router.put('/addons-catalog/installed/:projectId', requireServerPermission(PERMISSIONS.minecraft.addons.write), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const serverId = routeServerId(req);
+        const body = req.body === undefined || req.body === null ? {} : requireBodyObject(req.body);
+        const server = await getServerOrThrow(serverId);
+
+        const result = await installMinecraftAddon(server, String(req.params.projectId), {
+            versionId: optionalString(body.versionId) ?? null,
+        });
+
+        await actionsRepository.create(
+            serverId,
+            'success',
+            result.replacedVersionId
+                ? `Minecraft addon updated: ${result.addon.title ?? result.addon.fileName} (${result.addon.versionNumber ?? result.addon.versionId})`
+                : `Minecraft addon installed: ${result.addon.title ?? result.addon.fileName} (${result.addon.versionNumber ?? result.addon.versionId})`,
+            routeActor(req)
+        );
+
+        return res.json(result);
+    } catch (error) {
+        return sendRouteError(res, error, {
+            route: 'ROUTE:MINECRAFT:ADDONS_CATALOG_INSTALL',
+            logContext: { serverId: req.params.id, projectId: req.params.projectId },
+            fallbackMessage: 'Failed to install the Minecraft addon',
+        });
+    }
+});
+
+// PATCH /api/servers/:id/minecraft/addons-catalog/installed
+router.patch('/addons-catalog/installed', requireServerPermission(PERMISSIONS.minecraft.addons.write), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const serverId = routeServerId(req);
+        const body = requireBodyObject(req.body);
+        const fileName = requireTrimmedString(body.fileName, 'fileName is required');
+
+        if (typeof body.enabled !== 'boolean') {
+            throw Object.assign(new Error('enabled must be a boolean'), { statusCode: 400 });
+        }
+
+        const server = await getServerOrThrow(serverId);
+        const addon = await setMinecraftAddonEnabled(server, fileName, body.enabled);
+
+        await actionsRepository.create(
+            serverId,
+            'success',
+            `Minecraft addon ${body.enabled ? 'enabled' : 'disabled'}: ${addon.title ?? addon.fileName}`,
+            routeActor(req)
+        );
+
+        return res.json({ addon, restartRequired: true });
+    } catch (error) {
+        return sendRouteError(res, error, {
+            route: 'ROUTE:MINECRAFT:ADDONS_CATALOG_TOGGLE',
+            logContext: { serverId: req.params.id },
+            fallbackMessage: 'Failed to change the Minecraft addon state',
+        });
+    }
+});
+
+// GET /api/servers/:id/minecraft/addons-catalog/projects/:projectId
+router.get('/addons-catalog/projects/:projectId', requireServerPermission(PERMISSIONS.minecraft.addons.read), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const serverId = routeServerId(req);
+        const server = await getServerOrThrow(serverId);
+        const project = await getMinecraftAddonProject(server, String(req.params.projectId), {
+            anyVersion: optionalQueryString(req.query.anyVersion) === 'true',
+        });
+        return res.json({ project });
+    } catch (error) {
+        return sendRouteError(res, error, {
+            route: 'ROUTE:MINECRAFT:ADDONS_CATALOG_PROJECT',
+            logContext: { serverId: req.params.id, projectId: req.params.projectId },
+            fallbackMessage: 'Failed to read the Minecraft addon details',
+        });
+    }
+});
 
 // GET /api/servers/:id/minecraft/operators
 router.get('/operators', requireServerPermission(PERMISSIONS.minecraft.operators.read), async (req: AuthenticatedRequest, res: Response) => {

@@ -130,7 +130,8 @@ if compose_cmd config --services | grep -qx 'updater'; then
 fi
 
 update_job "running" "restarting_stack" "Rebuilding and restarting Game Panel stack"
-compose_cmd up -d --build --remove-orphans
+compose_cmd build --pull
+compose_cmd up -d --remove-orphans
 
 update_job "running" "verifying_health" "Waiting for the updated panel to become healthy"
 if ! wait_for_backend_healthy; then

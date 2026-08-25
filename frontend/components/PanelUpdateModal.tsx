@@ -92,7 +92,7 @@ export function PanelUpdateModal({ isOpen, onClose, updateInfo }: PanelUpdateMod
   const noLatest = updateInfo?.latestVersion === null;
 
   return (
-    <AppModal open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+    <AppModal open={isOpen} closeOnInteractOutside={false} onOpenChange={(open) => !open && handleClose()}>
       <AppModalContent
         dismissible={false}
         className={`z-[61] flex max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl flex-col overflow-hidden rounded-xl border shadow-xl ${

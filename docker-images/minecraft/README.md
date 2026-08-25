@@ -12,6 +12,7 @@ The images provide a predictable Docker runtime for Minecraft Java Edition and M
 | Minecraft Paper | Java 8, 17, 21, 25 | Runs Paper server. |
 | Minecraft Fabric | Java 8, 17, 21, 25 | Runs Fabric server. |
 | Minecraft NeoForge | Java 8, 17, 21, 25 | Runs NeoForge server. |
+| Minecraft Forge | Java 8, 17, 21, 25 | Runs Forge server. |
 | Minecraft Bedrock Edition | - | Runs the official Bedrock dedicated server. |
 
 ## ✅ Capabilities
@@ -23,7 +24,7 @@ The images provide a predictable Docker runtime for Minecraft Java Edition and M
 | Cold backup while stopped | Supported | Supported |
 | Restore | Supported | Supported |
 | Health check | Process and TCP check | Process check |
-| Mods / plugins | Paper: plugins; Fabric/NeoForge: mods; Vanilla: none | Not supported |
+| Mods / plugins | Paper: plugins; Fabric/NeoForge/Forge: mods; Vanilla: none | Not supported |
 | Persistent data | `/data` | `/data` |
 | Backup directory | `/backups` | `/backups` |
 
@@ -39,6 +40,7 @@ Common image inputs:
 | Paper | `EULA`, `MC_VERSION`, `PAPER_BUILD`, `PAPERMC_USER_AGENT` |
 | Fabric | `EULA`, `MC_VERSION`, `FABRIC_LOADER_VERSION`, `FABRIC_INSTALLER_VERSION` |
 | NeoForge | `EULA`, `NEOFORGE_VERSION` |
+| Forge | `EULA`, `MC_VERSION`, `FORGE_VERSION` |
 | Bedrock | `EULA`, `MC_VERSION`, `BEDROCK_DOWNLOAD_URL` |
 
 Boolean inputs accept `true` / `false` (and `1`, `yes`, `on` / `0`, `no`, `off`), case-insensitive.
@@ -80,7 +82,9 @@ Backups are stored as `.tar.gz` archives. Downloadable server artifacts are excl
 Mod and plugin support depends on the image family:
 
 - **Paper** — server plugins (`.jar`) placed in `/data/plugins`.
-- **Fabric / NeoForge** — mods (`.jar`) placed in `/data/mods`; the mod loader is part of the server image.
+- **Fabric / NeoForge / Forge** — mods (`.jar`) placed in `/data/mods`; the mod loader is part of the server image.
 - **Vanilla** and **Bedrock** — no plugin or mod support.
+
+The panel can install mods and plugins from Modrinth straight into these directories, alongside files added by hand through the File Manager.
 
 A restart is required for changes to take effect.

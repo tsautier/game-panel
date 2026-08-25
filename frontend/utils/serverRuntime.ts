@@ -12,6 +12,9 @@ export interface ServerMetricHistoryPoint {
 export interface LogEntry {
   id: number;
   timestamp: string;
+  // Pre-formatted local date/time, computed once at ingestion so the console never has to
+  // run new Date()/formatting per row on every render (or when toggling the Date/Time column).
+  displayTime?: string;
   type: 'info' | 'warning' | 'error' | 'success' | 'command' | 'action';
   message: string;
 }
@@ -133,6 +136,20 @@ export function formatServerStatusLabel(status: unknown): string {
     default:
       return 'Stopped';
   }
+}
+
+// Format an ISO timestamp to a local "YYYY-MM-DD HH:mm:ss" string for the console.
+// Called once per line at ingestion (see normalizeLogEntries) rather than per render.
+export function formatLogDisplayTime(value: string): string {
+  const parsed = new Date(value);
+  const date = !Number.isNaN(parsed.getTime()) ? parsed : new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 export function extractTimestampedLogLine(line: unknown): { timestamp: string; message: string } {

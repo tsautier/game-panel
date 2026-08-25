@@ -8,8 +8,8 @@ ARG IMAGE_REVISION="unknown"
 ARG IMAGE_VERSION="dev"
 ARG IMAGE_SOURCE="https://github.com/ovh/game-panel"
 
-LABEL org.opencontainers.image.title="Minecraft NeoForge Server Image" \
-      org.opencontainers.image.description="Game Panel image for Minecraft NeoForge servers." \
+LABEL org.opencontainers.image.title="Minecraft Forge Server Image" \
+      org.opencontainers.image.description="Game Panel image for Minecraft Forge servers." \
       org.opencontainers.image.created="${IMAGE_CREATED}" \
       org.opencontainers.image.revision="${IMAGE_REVISION}" \
       org.opencontainers.image.version="${IMAGE_VERSION}" \
@@ -31,7 +31,7 @@ RUN rm -f /usr/bin/pebble \
 
 WORKDIR /app
 
-COPY neoforge/docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY forge/docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY shared/scripts/common.sh /app/common.sh
 COPY shared/scripts/launcher.sh /app/launcher.sh
 COPY shared/scripts/send-command.sh /app/send-command.sh
@@ -46,7 +46,7 @@ RUN chmod 0555 /app/*.sh \
       && chown -R gameserver:gameserver /run/minecraft /data /backups /home/gameserver
 
 ENV HOME=/home/gameserver
-ENV GAMESERVER_SERVER_TYPE=neoforge
+ENV GAMESERVER_SERVER_TYPE=forge
 
 EXPOSE 25565
 

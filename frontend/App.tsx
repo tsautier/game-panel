@@ -79,6 +79,10 @@ function AppContent() {
   const [gameNamesByKey, setGameNamesByKey] = useState<Record<string, string>>({});
   const [logPromptRules, setLogPromptRules] = useState<LogPromptRule[]>([]);
   const serversRef = useRef<GameServer[]>([]);
+  // Incoming log lines are buffered here and flushed once per animation frame, so a burst
+  // of many lines becomes a single state update/render instead of one per line.
+  const logBufferRef = useRef<Record<string, LogEntry[]>>({});
+  const logFlushHandleRef = useRef<number | null>(null);
   const suppressReplayAfterClearRef = useRef<Record<string, boolean>>({});
   const lastInstallProgressLogRef = useRef<Record<number, number>>({});
   const handleWebSocketMessageRef = useRef<(message: any) => void>(() => {});
@@ -428,6 +432,9 @@ function AppContent() {
   }, []);
 
   const replaceServerLogs = useCallback((serverId: string, nextLogs: LogEntry[]) => {
+    // Drop any buffered stream lines for this server so they don't land on top of the
+    // history we're about to set.
+    delete logBufferRef.current[serverId];
     setServerLogs((prev) => ({
       ...prev,
       [serverId]: nextLogs.slice(-MAX_SERVER_LOG_LINES),
@@ -548,12 +555,29 @@ function AppContent() {
     serverLogHistoryLimit: SERVER_LOG_HISTORY_LIMIT,
   });
 
+  // Flush all buffered log lines in one state update (one render), sliced once to the cap.
+  const flushLogBuffer = () => {
+    logFlushHandleRef.current = null;
+    const buffer = logBufferRef.current;
+    logBufferRef.current = {};
+    const serverIds = Object.keys(buffer);
+    if (serverIds.length === 0) return;
+    setServerLogs((prev) => {
+      const next = { ...prev };
+      for (const sid of serverIds) {
+        next[sid] = [...(prev[sid] || []), ...buffer[sid]].slice(-MAX_SERVER_LOG_LINES);
+      }
+      return next;
+    });
+  };
+
   const handleAddLog = (serverId: string, log: LogEntry) => {
     maybeCreateLogPromptToast(serverId, log.message);
-    setServerLogs((prev) => ({
-      ...prev,
-      [serverId]: [...(prev[serverId] || []), log].slice(-MAX_SERVER_LOG_LINES),
-    }));
+    (logBufferRef.current[serverId] ??= []).push(log);
+    // Coalesce bursts: schedule a single flush per frame instead of one setState per line.
+    if (logFlushHandleRef.current === null) {
+      logFlushHandleRef.current = requestAnimationFrame(flushLogBuffer);
+    }
   };
 
   const addServerHistoryEntries = (serverId: string, incoming: ServerHistoryEntry[]) => {

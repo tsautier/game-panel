@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ARG IMAGE_CREATED="unknown"
 ARG IMAGE_REVISION="unknown"
@@ -13,14 +13,16 @@ LABEL org.opencontainers.image.title="Minecraft Bedrock Edition Server Image" \
       org.opencontainers.image.source="${IMAGE_SOURCE}" \
       org.opencontainers.image.vendor="OVHcloud" \
       org.opencontainers.image.licenses="Apache-2.0" \
-      org.opencontainers.image.base.name="ubuntu:22.04"
+      org.opencontainers.image.base.name="ubuntu:24.04"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
       curl \
       jq \
-      ca-certificates \
-      unzip \
+      libcurl4t64 \
+      libssl3t64 \
       tar \
+      unzip \
       && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

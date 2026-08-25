@@ -151,7 +151,8 @@ main() {
   pull_updater_image_best_effort "ovhcom/gamepanel-updater:$(read_app_version "$APP_SOURCE_DIR")"
 
   log "Rebuilding and starting updated GamePanel stack..."
-  compose_cmd up -d --build --remove-orphans
+  compose_cmd build --pull
+  compose_cmd up -d --remove-orphans
 
   wait_for_stack
   send_panel_updated_event

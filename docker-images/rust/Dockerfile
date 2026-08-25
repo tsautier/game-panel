@@ -4,6 +4,7 @@ ARG IMAGE_CREATED="unknown"
 ARG IMAGE_REVISION="unknown"
 ARG IMAGE_VERSION="dev"
 ARG IMAGE_SOURCE="https://github.com/ovh/game-panel"
+ARG WEBSOCAT_VERSION=v1.13.0
 
 LABEL org.opencontainers.image.title="Rust Server Image" \
    org.opencontainers.image.description="Game Panel image for Rust dedicated servers." \
@@ -39,7 +40,7 @@ RUN groupadd --gid 10001 gameserver \
    && test -f /opt/steamcmd/linux64/steamclient.so \
    && chown -R gameserver:gameserver /opt/steamcmd /run/rust /data /backups /home/gameserver
 
-RUN curl -fsSL "https://github.com/vi/websocat/releases/download/v1.13.0/websocat.x86_64-unknown-linux-musl" \
+RUN curl -fsSL "https://github.com/vi/websocat/releases/download/${WEBSOCAT_VERSION}/websocat.x86_64-unknown-linux-musl" \
    -o /usr/local/bin/websocat \
    && chmod 0555 /usr/local/bin/websocat
 

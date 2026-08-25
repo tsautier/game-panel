@@ -1,4 +1,4 @@
-ARG NODE_IMAGE=node:20.20.1-alpine3.22
+ARG NODE_IMAGE=node:24-alpine3.24
 
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /app/backend

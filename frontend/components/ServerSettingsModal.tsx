@@ -121,12 +121,12 @@ export function ServerSettingsModal({
     }
   })();
 
-  const validMcServerTypes: McServerType[] = ['vanilla', 'paper', 'fabric', 'neoforge', 'bedrock'];
+  const validMcServerTypes: McServerType[] = ['vanilla', 'paper', 'fabric', 'neoforge', 'forge', 'bedrock'];
   const mcServerTypeChecked: McServerType | null = validMcServerTypes.includes(minecraftServerType as McServerType)
     ? (minecraftServerType as McServerType)
     : null;
   const addonKind: 'plugins' | 'mods' = minecraftServerType === 'paper' ? 'plugins' : 'mods';
-  const addonsSupportedTypes = ['paper', 'fabric', 'neoforge'];
+  const addonsSupportedTypes = ['paper', 'fabric', 'neoforge', 'forge'];
   const minecraftAddonsSupported = addonsSupportedTypes.includes(minecraftServerType ?? '');
 
   // Project Zomboid's config files are prefixed with PZ_SERVERNAME (the container env,

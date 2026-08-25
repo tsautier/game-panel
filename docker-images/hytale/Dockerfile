@@ -30,9 +30,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
       iproute2 \
       jq \
-      zip \
       unzip \
+      zip \
       && rm -rf /var/lib/apt/lists/*
+
+RUN rm -f /usr/bin/pebble \
+      && rm -rf /var/lib/pebble
 
 WORKDIR /app
 

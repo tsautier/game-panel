@@ -79,6 +79,7 @@ export async function installOvhcloudHytaleServer(params: {
     containerName: string;
     spec: ResolvedInstallSpec;
     username?: string;
+    skipTelemetry?: boolean;
 }): Promise<void> {
     const metadata = params.spec.providerMetadata as OvhcloudHytaleMetadata;
     const paths = hytalePaths(params.serverId, metadata.patchline);
@@ -195,12 +196,14 @@ export async function installOvhcloudHytaleServer(params: {
     );
 
     await assertServerExistsDuringInstall(params.serverId);
-    sendGameInstalledTelemetry({
-        serverId: params.serverId,
-        provider: params.spec.provider,
-        catalogId: params.spec.catalogId,
-        dockerImage: null,
-    });
+    if (!params.skipTelemetry) {
+        sendGameInstalledTelemetry({
+            serverId: params.serverId,
+            provider: params.spec.provider,
+            catalogId: params.spec.catalogId,
+            dockerImage: null,
+        });
+    }
 }
 
 export async function recreateHytaleContainer(params: {

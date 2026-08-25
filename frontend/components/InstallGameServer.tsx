@@ -4,14 +4,14 @@ import { AlertTriangle, ArrowLeft, ArrowRight, ChevronDown, Eye, EyeOff, Package
 import { InstallationProgressModal } from './InstallationProgressModal';
 import type { InstallGameHandlerPayload } from './app/appActionHandlers';
 import type { InstallInteraction, InstallStep } from '../types/gameServer';
-import { type OvhcloudImage } from '../utils/ovhcloudCatalog';
+import { minecraftJavaVariants, type OvhcloudImage } from '../utils/ovhcloudCatalog';
 import { OVH_UNIFIED, filterLgsmForUnified } from '../utils/unifiedGameCatalog';
 import { getLinuxGsmGames, type LinuxGsmGame } from '../utils/linuxGsmCatalog';
 import { apiClient } from '../utils/api';
 import { GameVersionModal } from './GameVersionModal';
 import { AppButton, AppSelect, AppToggle, InfoTip } from '../src/ui/components';
 import { ProviderLogo } from './gameServersTable/ProviderBadge';
-import { MinecraftVersionPicker } from './MinecraftVersionPicker';
+import { MinecraftVersionPicker, type JavaImageOption } from './MinecraftVersionPicker';
 import { getMcServerType, getPickerManagedKeys, type McServerType } from '../utils/minecraftCatalog';
 import { fetchProjectZomboidBranches, type ProjectZomboidBranch } from '../utils/projectZomboidBranches';
 
@@ -388,6 +388,8 @@ interface ConfigModalProps {
   mcServerType?: McServerType | null;
   pickerInitialEnv?: Record<string, string>;
   onPickerEnvChange?: (env: Record<string, string>) => void;
+  pickerJavaImages?: JavaImageOption[];
+  onPickerJavaImageChange?: (img: { imageId: string; dockerImage: string }) => void;
   requireEula?: boolean;
 }
 
@@ -412,7 +414,7 @@ function ConfigModal({
   requireGameCopy,
   cpuLimit, setCpuLimit, memoryLimitMb, setMemoryLimitMb,
   error, loading, onConfirm, onCancel,
-  mcServerType, pickerInitialEnv, onPickerEnvChange, requireEula,
+  mcServerType, pickerInitialEnv, onPickerEnvChange, pickerJavaImages, onPickerJavaImageChange, requireEula,
 }: ConfigModalProps) {
   useBodyScrollLock(true);
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
@@ -717,6 +719,8 @@ function ConfigModal({
                 initialEnv={pickerInitialEnv}
                 canEdit={!loading}
                 onEnvChange={onPickerEnvChange}
+                javaImages={pickerJavaImages}
+                onJavaImageChange={onPickerJavaImageChange}
               />
             </div>
           )}
@@ -1019,6 +1023,9 @@ export function InstallGameServer({
   const [configMcServerType, setConfigMcServerType] = useState<McServerType | null>(null);
   const [pickerInitialEnv, setPickerInitialEnv] = useState<Record<string, string>>({});
   const [pickerEnv, setPickerEnv] = useState<Record<string, string>>({});
+  // Java variants of the opened Minecraft image; drives the picker's Java select, which
+  // swaps imageId/dockerImage in the pending payload. Empty for bedrock and non-minecraft.
+  const [pickerJavaImages, setPickerJavaImages] = useState<JavaImageOption[]>([]);
 
   // Load LinuxGSM catalog when modal opens
   useEffect(() => {
@@ -1078,6 +1085,7 @@ export function InstallGameServer({
     setConfigMcServerType(null);
     setPickerInitialEnv({});
     setPickerEnv({});
+    setPickerJavaImages([]);
     setCpuLimit('');
     setMemoryLimitMb('');
   };
@@ -1093,6 +1101,7 @@ export function InstallGameServer({
       if (key in imageEnvAll) initialPicker[key] = imageEnvAll[key];
     }
     setConfigMcServerType(mcType);
+    setPickerJavaImages(minecraftJavaVariants(image.imageId));
     setPickerInitialEnv({});
     setPickerEnv(initialPicker);
     setConfigTitle(`Install ${image.name}`);
@@ -1134,6 +1143,11 @@ export function InstallGameServer({
     setPendingPayloadBase({ provider: 'ovhcloud', imageId: image.imageId, dockerImage: image.dockerImage });
     setShowConfig(true);
   };
+
+  // The Java select resolved to a different image: swap it in the pending payload. The
+  // four Java variants of a type share ports/env/mounts, so nothing else needs recomputing.
+  const handlePickerJavaImage = (img: { imageId: string; dockerImage: string }) =>
+    setPendingPayloadBase((prev) => (prev ? { ...prev, imageId: img.imageId, dockerImage: img.dockerImage } : prev));
 
   const openLgsmConfig = async (game: LinuxGsmGame) => {
     resetConfigState();
@@ -1706,6 +1720,8 @@ export function InstallGameServer({
           mcServerType={configMcServerType}
           pickerInitialEnv={pickerInitialEnv}
           onPickerEnvChange={setPickerEnv}
+          pickerJavaImages={pickerJavaImages}
+          onPickerJavaImageChange={handlePickerJavaImage}
           requireEula={configRequireEula}
         />
       )}

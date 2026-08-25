@@ -35,7 +35,7 @@ Game server images follow the same general conventions:
 
 | Image family | Console commands | Backups | Restores | Mods | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Minecraft Java | Supported | Supported | Supported | Paper: plugins; Fabric/NeoForge: mods | Vanilla, Paper, Fabric, and NeoForge variants. |
+| Minecraft Java | Supported | Supported | Supported | Paper: plugins; Fabric/NeoForge/Forge: mods | Vanilla, Paper, Fabric, NeoForge, and Forge variants. |
 | Minecraft Bedrock | Supported | Supported | Supported | Not supported | Uses the official Bedrock server archive supplied at runtime. |
 | Hytale | Supported | Supported | Supported | Supported | Requires prepared Hytale server files before startup. |
 | Counter-Strike 2 | Supported | Not supported | Not supported | Frameworks (MetaMod + CounterStrikeSharp) | Includes MetaMod and CounterStrikeSharp helper scripts. |

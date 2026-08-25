@@ -19,12 +19,15 @@ LABEL org.opencontainers.image.title="Minecraft Paper Server Image" \
       org.opencontainers.image.base.name="eclipse-temurin:${JAVA_VERSION}-jre"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
       curl \
       jq \
       netcat-openbsd \
-      ca-certificates \
       tar \
       && rm -rf /var/lib/apt/lists/*
+
+RUN rm -f /usr/bin/pebble \
+      && rm -rf /var/lib/pebble
 
 WORKDIR /app
 

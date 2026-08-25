@@ -278,6 +278,12 @@
   animation: gp-console-ready-pulse 1.1s ease-in-out infinite;
 }
 
+/* Non-destructive Date/Time toggle: the timestamp span is always rendered and hidden here,
+   so toggling is a single class change instead of mutating every row's DOM. */
+.gp-console-hide-time .gp-log-time {
+  display: none;
+}
+
 @keyframes gp-console-ready-pop {
   0% {
     opacity: 0;

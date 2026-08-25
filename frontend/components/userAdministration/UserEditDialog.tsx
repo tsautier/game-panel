@@ -109,7 +109,8 @@ export function UserEditDialog({
   const isMinecraftWithAddons = isMinecraftOvhcloudServer && (
     selectedServer?.catalogId?.includes('paper') ||
     selectedServer?.catalogId?.includes('fabric') ||
-    selectedServer?.catalogId?.includes('neoforge')
+    selectedServer?.catalogId?.includes('neoforge') ||
+    selectedServer?.catalogId?.includes('forge')
   );
   const isHytaleOvhcloudServer = isOvhcloud && selectedServer?.catalogId === 'hytale';
   const isPalworldOvhcloudServer = isOvhcloud && selectedServer?.catalogId === 'palworld';

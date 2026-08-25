@@ -125,6 +125,22 @@ metadata_value_from_json() {
   printf '%s' "${META_JSON}" | jq -er "${JQ_FILTER} // empty" 2>/dev/null
 }
 
+resolve_server_artifact_from_metadata() {
+  ARTIFACT_META_FILE="$(gameserver_meta_file)"
+  ARTIFACT_META_PATH="$(metadata_value_from_file "${ARTIFACT_META_FILE}" '.artifact.path' || true)"
+
+  [ -n "${ARTIFACT_META_PATH}" ] || return 1
+
+  case "${ARTIFACT_META_PATH}" in
+    /*)
+      printf '%s\n' "${ARTIFACT_META_PATH}"
+      ;;
+    *)
+      printf '%s\n' "${DATA_DIR:-/data}/${ARTIFACT_META_PATH}"
+      ;;
+  esac
+}
+
 metadata_identity_from_file() {
   META_FILE="$1"
 
@@ -148,7 +164,8 @@ metadata_identity_from_file() {
             .minecraftVersion,
             (.paperBuild // ""),
             (.fabricLoaderVersion // ""),
-            (.fabricInstallerVersion // "")
+            (.fabricInstallerVersion // ""),
+            (.forgeVersion // "")
           ]
       end
     | map(tostring)
@@ -179,7 +196,8 @@ metadata_identity_from_json() {
             .minecraftVersion,
             (.paperBuild // ""),
             (.fabricLoaderVersion // ""),
-            (.fabricInstallerVersion // "")
+            (.fabricInstallerVersion // ""),
+            (.forgeVersion // "")
           ]
       end
     | map(tostring)
@@ -198,6 +216,7 @@ write_gameserver_metadata() {
   NEOFORGE_VERSION="${8:-}"
   SERVER_STARTER_JAR_URL="${9:-}"
   INSTALLER_SHA256="${10:-}"
+  FORGE_VERSION="${11:-}"
 
   META_FILE="$(gameserver_meta_file)"
   META_DIR="$(dirname "${META_FILE}")"
@@ -213,6 +232,7 @@ write_gameserver_metadata() {
     --arg fabricLoaderVersion "${FABRIC_LOADER_VERSION}" \
     --arg fabricInstallerVersion "${FABRIC_INSTALLER_VERSION}" \
     --arg neoForgeVersion "${NEOFORGE_VERSION}" \
+    --arg forgeVersion "${FORGE_VERSION}" \
     --arg serverStarterJarUrl "${SERVER_STARTER_JAR_URL}" \
     --arg installerSha256 "${INSTALLER_SHA256}" \
     --arg artifactPath "${ARTIFACT_PATH}" \
@@ -256,6 +276,13 @@ write_gameserver_metadata() {
       + (
         if $neoForgeVersion != "" then
           {neoForgeVersion: $neoForgeVersion}
+        else
+          {}
+        end
+      )
+      + (
+        if $forgeVersion != "" then
+          {forgeVersion: $forgeVersion}
         else
           {}
         end

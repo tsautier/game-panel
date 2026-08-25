@@ -1,4 +1,7 @@
-FROM alpine:3.22
+ARG COMPOSE_VERSION=v5.4.0
+FROM docker/compose-bin:${COMPOSE_VERSION} AS compose
+
+FROM alpine:3.24
 
 ARG IMAGE_CREATED="unknown"
 ARG IMAGE_REVISION="unknown"
@@ -13,17 +16,19 @@ LABEL org.opencontainers.image.title="Game Panel Updater Image" \
     org.opencontainers.image.source="${IMAGE_SOURCE}" \
     org.opencontainers.image.vendor="OVHcloud" \
     org.opencontainers.image.licenses="Apache-2.0" \
-    org.opencontainers.image.base.name="alpine:3.22"
+    org.opencontainers.image.base.name="alpine:3.24"
 
 RUN apk add --no-cache \
     bash \
     ca-certificates \
     curl \
     docker-cli \
-    docker-cli-compose \
     git \
     sqlite \
     tar
+
+COPY --from=compose /docker-compose /usr/libexec/docker/cli-plugins/docker-compose
+RUN docker compose version
 
 COPY docker-images/gamepanel/updater/update-runner.sh /usr/local/bin/gamepanel-update-runner
 RUN mkdir -p /usr/local/lib/gamepanel

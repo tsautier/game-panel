@@ -23,6 +23,7 @@ OVHcloud Game Panel is an **open-source, self-hosted** control panel to deploy, 
 - 🕹️ Interactive in-browser game console.
 - 📁 Powerful built-in file manager.
 - 💾 One-click backups and restores.
+- 🧩 In-panel mods installation.
 - ⏰ Flexible task scheduling.
 - 🐳 Advanced container configuration.
 - 🔐 Fine-grained user permissions.
@@ -34,7 +35,7 @@ OVHcloud Game Panel is an **open-source, self-hosted** control panel to deploy, 
 
 **Natively supported**, ready to deploy with OVHcloud-maintained images:
 
-- **Minecraft** — Java Edition, Paper, Fabric, NeoForge, and Bedrock Edition
+- **Minecraft** — Java Edition, Paper, Fabric, NeoForge, Forge, and Bedrock Edition
 - **Counter-Strike 2**
 - **Hytale**
 - **Palworld**

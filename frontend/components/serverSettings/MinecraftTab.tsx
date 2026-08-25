@@ -3,7 +3,7 @@ import { AlertTriangle, Check, Loader2, Plus, Save, Trash2 } from 'lucide-react'
 import { AppButton } from '../../src/ui/components';
 import { apiClient } from '../../utils/api';
 import { GameSettingsSection } from './GameSettingsSection';
-import { ModsSection } from './ModsSection';
+import { MinecraftAddonsSection } from './MinecraftAddonsSection';
 import { GameWipeTab } from './GameWipeTab';
 import { buildWipeModes } from './wipeModes';
 import { MinecraftVersionPicker } from '../MinecraftVersionPicker';
@@ -822,7 +822,7 @@ export function MinecraftSections({
   }).length > 0;
 
   const tabs: { id: MinecraftSubTab; label: string }[] = [
-    (canReadSettings || canShowVersion) && { id: 'settings', label: 'Server Settings' },
+    (canReadSettings || canShowVersion) && { id: 'settings', label: 'Settings' },
     canReadAddons     && { id: 'addons',     label: addonLabel },
     canReadOperators  && { id: 'operators',  label: 'Operators' },
     canReadWhitelist  && { id: 'whitelist',  label: 'Whitelist' },
@@ -912,11 +912,9 @@ export function MinecraftSections({
       )}
       {visited.has('addons') && canReadAddons && (
         <div className={activeTab !== 'addons' ? 'hidden' : ''}>
-          <ModsSection
+          <MinecraftAddonsSection
             serverId={serverId}
             serverStatus={serverStatus}
-            kind={addonKind}
-            apiKind="minecraft"
             canRead={canReadAddons}
             canWrite={canWriteAddons}
             borderColor={borderColor}

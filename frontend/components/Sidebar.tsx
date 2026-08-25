@@ -276,7 +276,7 @@ export function Sidebar({
         <div className="flex flex-col items-center">
           <h3 className="mb-4 text-xs font-medium text-gray-400">Follow Us</h3>
 
-          <div className="flex items-center justify-center gap-6">
+          <div className="flex items-center justify-center gap-4">
             {/* Reddit */}
             <a href="https://www.reddit.com/r/OVHcloud/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center" aria-label="Reddit">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
@@ -304,6 +304,13 @@ export function Sidebar({
                 <path fill="#FF0000" d="M23.74 7.1s-.23-1.65-.95-2.37c-.91-.96-1.93-.96-2.4-1.02C17.04 3.47 12 3.5 12 3.5s-5.02-.03-8.37.21c-.46.06-1.48.06-2.39 1.02C.52 5.45.28 7.1.28 7.1S.04 9.05 0 10.98V13c.04 1.94.28 3.87.28 3.87s.24 1.65.96 2.38c.91.95 2.1.92 2.64 1.02 1.88.18 7.91.22 8.12.22 0 0 5.05.01 8.4-.23.46-.06 1.48-.06 2.39-1.02.72-.72.96-2.37.96-2.37s.24-1.94.25-3.87v-2.02c-.02-1.93-.26-3.88-.26-3.88zM9.57 15.5V8.49L16 12.13 9.57 15.5z" />
               </svg>
             </a>
+
+            {/* GitHub */}
+            <a href="https://github.com/ovh/game-panel" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center" aria-label="GitHub">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+                <path fill="#FFFFFF" d="M12 .5C5.37.5 0 5.78 0 12.292c0 5.211 3.438 9.63 8.205 11.188.6.111.82-.254.82-.567 0-.28-.01-1.022-.015-2.005-3.338.711-4.042-1.582-4.042-1.582-.546-1.361-1.335-1.725-1.335-1.725-1.087-.731.084-.716.084-.716 1.205.082 1.838 1.215 1.838 1.215 1.07 1.803 2.809 1.282 3.495.981.108-.763.417-1.282.76-1.577-2.665-.295-5.466-1.309-5.466-5.827 0-1.287.465-2.339 1.235-3.164-.135-.297-.54-1.497.105-3.121 0 0 1.005-.316 3.3 1.209.96-.262 1.98-.392 3-.397 1.02.005 2.04.135 3 .397 2.28-1.525 3.285-1.209 3.285-1.209.645 1.624.24 2.824.12 3.121.765.825 1.23 1.877 1.23 3.164 0 4.53-2.805 5.527-5.475 5.817.42.354.81 1.077.81 2.182 0 1.578-.015 2.846-.015 3.229 0 .309.21.678.825.561C20.565 21.917 24 17.495 24 12.292 24 5.78 18.627.5 12 .5Z" />
+              </svg>
+            </a>
           </div>
         </div>
       </div>
@@ -325,7 +332,7 @@ export function Sidebar({
           </a>
         </div>
 
-        <div className="mt-2.5 flex items-center justify-center gap-2 text-[10px] text-gray-500">
+        <div className="mt-2.5 flex flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap text-[10px] text-gray-500">
           {currentUser?.isRoot ? (
             <button
               type="button"
@@ -348,6 +355,14 @@ export function Sidebar({
           >
             Legal
           </button>
+          <a
+            href="https://github.com/ovh/game-panel/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-sm px-1 text-[10px] transition-colors text-gray-500 hover:text-gray-300"
+          >
+            Bug or feature?
+          </a>
         </div>
       </div>
       </div>{/* end gp-sidebar-bottom */}

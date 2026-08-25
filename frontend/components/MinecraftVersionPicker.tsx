@@ -5,23 +5,40 @@ import {
   fetchFabricInstallers,
   fetchFabricLoaders,
   fetchFabricVersions,
+  fetchForgeBuilds,
+  fetchForgeVersions,
   fetchJavaVersions,
   fetchNeoForgeVersions,
   fetchPaperBuilds,
   fetchPaperVersions,
+  resolveJavaImageMajor,
+  resolveRequiredJava,
   type BedrockVersion,
   type FabricVersion,
+  type ForgeBuild,
   type JavaVersion,
   type McServerType,
+  type McVersionInfo,
   type NeoForgeVersion,
   type PaperBuild,
 } from '../utils/minecraftCatalog';
+
+// The Java variants (images) available for the selected server type. Passing this in
+// turns on the automatic Java-version select (install flow only); omitting it keeps
+// the picker Java-free (settings tab, where the image can't be swapped).
+export interface JavaImageOption {
+  major: number;
+  imageId: string;
+  dockerImage: string;
+}
 
 interface MinecraftVersionPickerProps {
   serverType: McServerType;
   initialEnv?: Record<string, string>;
   canEdit?: boolean;
   onEnvChange: (env: Record<string, string>) => void;
+  javaImages?: JavaImageOption[];
+  onJavaImageChange?: (img: { imageId: string; dockerImage: string }) => void;
 }
 
 const selectCls =
@@ -60,13 +77,17 @@ export function MinecraftVersionPicker({
   initialEnv = {},
   canEdit = true,
   onEnvChange,
+  javaImages,
+  onJavaImageChange,
 }: MinecraftVersionPickerProps) {
   const [status, setStatus] = useState<LoadStatus>('loading');
 
   // Catalog data
   const [javaVersions, setJavaVersions] = useState<JavaVersion[]>([]);
-  const [paperMcVersions, setPaperMcVersions] = useState<string[]>([]);
+  const [paperMcVersions, setPaperMcVersions] = useState<McVersionInfo[]>([]);
   const [paperBuilds, setPaperBuilds] = useState<PaperBuild[]>([]);
+  const [forgeMcVersions, setForgeMcVersions] = useState<McVersionInfo[]>([]);
+  const [forgeBuilds, setForgeBuilds] = useState<ForgeBuild[]>([]);
   const [buildsStatus, setBuildsStatus] = useState<LoadStatus>('loading');
   const [fabricMcVersions, setFabricMcVersions] = useState<FabricVersion[]>([]);
   const [fabricLoaders, setFabricLoaders] = useState<FabricVersion[]>([]);
@@ -80,10 +101,19 @@ export function MinecraftVersionPicker({
 
   const [mcVersion, setMcVersion] = useState(initialEnv.MC_VERSION ?? '');
   const [paperBuild, setPaperBuild] = useState('');
+  const [forgeBuild, setForgeBuild] = useState('');
   const [fabricLoader, setFabricLoader] = useState(initialEnv.FABRIC_LOADER_VERSION ?? '');
   const [fabricInstaller, setFabricInstaller] = useState(initialEnv.FABRIC_INSTALLER_VERSION ?? '');
   const [neoforgeVersion, setNeoforgeVersion] = useState(initialEnv.NEOFORGE_VERSION ?? '');
   const [bedrockChannel, setBedrockChannel] = useState<'release' | 'preview'>('release');
+
+  // Automatic Java resolution (install flow only — gated on javaImages). javaMajor is the
+  // effective selection (auto or user override); recommendedMajor is what the Minecraft
+  // version resolves to, used only to mark the recommended option. Default to the highest
+  // image (the variant the modal opens with) until the catalog loads and resolves it.
+  const [javaMajor, setJavaMajor] = useState<number | null>(() =>
+    javaImages && javaImages.length > 0 ? Math.max(...javaImages.map((v) => v.major)) : null);
+  const [recommendedMajor, setRecommendedMajor] = useState<number | null>(null);
 
   // Load catalog on mount
   useEffect(() => {
@@ -114,9 +144,20 @@ export function MinecraftVersionPicker({
             if (cancelled) return;
             if (!mcVers) { setStatus('failed'); return; }
             setPaperMcVersions(mcVers);
-            const init = initialEnv.MC_VERSION && mcVers.includes(initialEnv.MC_VERSION)
+            const init = initialEnv.MC_VERSION && mcVers.some((v) => v.version === initialEnv.MC_VERSION)
               ? initialEnv.MC_VERSION
-              : mcVers[0] ?? '';
+              : mcVers[0]?.version ?? '';
+            setMcVersion(init);
+            break;
+          }
+          case 'forge': {
+            const mcVers = await fetchForgeVersions();
+            if (cancelled) return;
+            if (!mcVers) { setStatus('failed'); return; }
+            setForgeMcVersions(mcVers);
+            const init = initialEnv.MC_VERSION && mcVers.some((v) => v.version === initialEnv.MC_VERSION)
+              ? initialEnv.MC_VERSION
+              : mcVers[0]?.version ?? '';
             setMcVersion(init);
             break;
           }
@@ -206,6 +247,29 @@ export function MinecraftVersionPicker({
     return () => { cancelled = true; };
   }, [serverType, mcVersion, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Forge: re-fetch builds when mcVersion changes
+  useEffect(() => {
+    if (serverType !== 'forge' || !mcVersion || status !== 'loaded') return;
+    setBuildsStatus('loading');
+    let cancelled = false;
+    fetchForgeBuilds(mcVersion).then((builds) => {
+      if (cancelled) return;
+      if (!builds) { setBuildsStatus('failed'); return; }
+      setForgeBuilds(builds);
+      setBuildsStatus('loaded');
+      // Keep an explicit build from env; otherwise default recommended → latest → first.
+      // build is a string sent verbatim (some pre-1.17 builds carry a branch suffix).
+      const initBuild = initialEnv.FORGE_VERSION && initialEnv.FORGE_VERSION !== 'latest'
+        && builds.some((b) => b.build === initialEnv.FORGE_VERSION)
+        ? initialEnv.FORGE_VERSION
+        : builds.find((b) => b.channel === 'recommended')?.build
+          ?? builds.find((b) => b.channel === 'latest')?.build
+          ?? builds[0]?.build ?? '';
+      setForgeBuild(initBuild);
+    });
+    return () => { cancelled = true; };
+  }, [serverType, mcVersion, status]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Compute env and notify parent
   const onEnvChangeRef = useRef(onEnvChange);
   useEffect(() => { onEnvChangeRef.current = onEnvChange; });
@@ -217,6 +281,9 @@ export function MinecraftVersionPicker({
       case 'paper':
         if (!mcVersion || !paperBuild) return {};
         return { MC_VERSION: mcVersion, PAPER_BUILD: paperBuild, PAPERMC_USER_AGENT: 'gamepanel/1.0' };
+      case 'forge':
+        if (!mcVersion || !forgeBuild) return {};
+        return { MC_VERSION: mcVersion, FORGE_VERSION: forgeBuild };
       case 'fabric':
         if (!mcVersion) return {};
         return { MC_VERSION: mcVersion, FABRIC_LOADER_VERSION: fabricLoader, FABRIC_INSTALLER_VERSION: fabricInstaller };
@@ -233,13 +300,72 @@ export function MinecraftVersionPicker({
         return ver ? { MC_VERSION: ver.version, BEDROCK_DOWNLOAD_URL: ver.downloadUrl } : {};
       }
     }
-  }, [serverType, mcVersion, paperBuild, fabricLoader, fabricInstaller, neoforgeVersion, bedrockChannel, bedrockVersions]);
+  }, [serverType, mcVersion, paperBuild, forgeBuild, fabricLoader, fabricInstaller, neoforgeVersion, bedrockChannel, bedrockVersions]);
 
   useEffect(() => {
     if (Object.keys(computedEnv).length > 0) {
       onEnvChangeRef.current(computedEnv);
     }
   }, [computedEnv]);
+
+  // ── Automatic Java resolution ──────────────────────────────────────────────
+  // The version list (with javaVersion) and the selected version that drive the
+  // resolution, per server type. Build/loader/installer selects never re-trigger it.
+  const javaDriver = useMemo((): { ordered: McVersionInfo[]; selected: string } | null => {
+    switch (serverType) {
+      case 'vanilla': return { ordered: javaVersions, selected: mcVersion };
+      case 'paper': return { ordered: paperMcVersions, selected: mcVersion };
+      case 'forge': return { ordered: forgeMcVersions, selected: mcVersion };
+      case 'fabric': return { ordered: fabricMcVersions, selected: mcVersion };
+      case 'neoforge': return { ordered: neoforgeVersions, selected: neoforgeVersion };
+      case 'bedrock': return null;
+    }
+  }, [serverType, mcVersion, neoforgeVersion, javaVersions, paperMcVersions, forgeMcVersions, fabricMcVersions, neoforgeVersions]);
+
+  // Re-resolve whenever the driving version changes — deliberately overwriting a prior
+  // manual override (§4.4). Skipped when the catalog failed or the version is unresolvable
+  // (empty / literal "latest"), where we keep whatever Java is selected (§5).
+  useEffect(() => {
+    if (!javaImages || javaImages.length === 0 || status !== 'loaded' || !javaDriver) return;
+    const { ordered, selected } = javaDriver;
+    if (!selected || selected === 'latest') return;
+    const majors = javaImages.map((v) => v.major);
+    const required = resolveRequiredJava(ordered, selected);
+    const recommended = required == null ? Math.max(...majors) : resolveJavaImageMajor(required, majors);
+    setRecommendedMajor(recommended);
+    setJavaMajor(recommended);
+  }, [javaImages, status, javaDriver]);
+
+  // Push the selected Java variant's image up to the parent (install payload).
+  const onJavaImageChangeRef = useRef(onJavaImageChange);
+  useEffect(() => { onJavaImageChangeRef.current = onJavaImageChange; });
+  useEffect(() => {
+    if (!javaImages || javaMajor == null) return;
+    const img = javaImages.find((v) => v.major === javaMajor);
+    if (img) onJavaImageChangeRef.current?.({ imageId: img.imageId, dockerImage: img.dockerImage });
+  }, [javaMajor, javaImages]);
+
+  // The Java select — rendered as the last select of the normal block for every
+  // Java-based server type. Null when the picker is Java-free (no javaImages / bedrock).
+  const renderJavaSelect = () => {
+    if (!javaImages || javaImages.length === 0 || serverType === 'bedrock') return null;
+    return (
+      <div>
+        <label className={labelCls}>Java Version</label>
+        <div className="relative">
+          <select className={selectCls} value={javaMajor ?? ''} disabled={!canEdit}
+            onChange={(e) => setJavaMajor(Number(e.target.value))}>
+            {javaImages.map((v) => (
+              <option key={v.major} value={v.major}>
+                Java {v.major}{v.major === recommendedMajor ? ' — Recommended' : ''}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+        </div>
+      </div>
+    );
+  };
 
   // ── Vanilla ────────────────────────────────────────────────────────────────
   if (serverType === 'vanilla') {
@@ -275,6 +401,7 @@ export function MinecraftVersionPicker({
             className="rounded border-gray-600 accent-[var(--gp-ods-accent-primary)]" />
           Include snapshots
         </label>
+        {renderJavaSelect()}
       </div>
     );
   }
@@ -298,7 +425,7 @@ export function MinecraftVersionPicker({
               <select className={selectCls} value={mcVersion} disabled={!canEdit}
                 onChange={(e) => setMcVersion(e.target.value)}>
                 {paperMcVersions.map((v, i) => (
-                  <option key={v} value={v}>{v}{i === 0 ? ' (Latest)' : ''}</option>
+                  <option key={v.version} value={v.version}>{v.version}{i === 0 ? ' (Latest)' : ''}</option>
                 ))}
               </select>
               <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -327,6 +454,63 @@ export function MinecraftVersionPicker({
             </div>
           )}
         </div>
+
+        {renderJavaSelect()}
+      </div>
+    );
+  }
+
+  // ── Forge ──────────────────────────────────────────────────────────────────
+  if (serverType === 'forge') {
+    return (
+      <div className="space-y-2.5">
+        <div>
+          <label className={labelCls}>Minecraft Version</label>
+          {status === 'loading' && <Skeleton />}
+          {status === 'failed' && (
+            <>
+              <CatalogError />
+              <input className={`${inputCls} mt-1.5`} value={mcVersion} disabled={!canEdit}
+                onChange={(e) => setMcVersion(e.target.value)} placeholder="e.g. 1.20.1" />
+            </>
+          )}
+          {status === 'loaded' && (
+            <div className="relative">
+              <select className={selectCls} value={mcVersion} disabled={!canEdit}
+                onChange={(e) => setMcVersion(e.target.value)}>
+                {forgeMcVersions.map((v, i) => (
+                  <option key={v.version} value={v.version}>{v.version}{i === 0 ? ' (Latest)' : ''}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label className={labelCls}>Forge Build</label>
+          {buildsStatus === 'loading' && <Skeleton />}
+          {buildsStatus === 'failed' && (
+            <input className={inputCls} value={forgeBuild} disabled={!canEdit}
+              onChange={(e) => setForgeBuild(e.target.value)} placeholder="e.g. 47.4.10" />
+          )}
+          {buildsStatus === 'loaded' && (
+            <div className="relative">
+              <select className={selectCls} value={forgeBuild} disabled={!canEdit}
+                onChange={(e) => setForgeBuild(e.target.value)}>
+                {forgeBuilds.map((b) => (
+                  <option key={b.build} value={b.build}>
+                    {b.build}
+                    {b.channel === 'recommended' ? ' — Recommended' : b.channel === 'latest' ? ' — Latest' : ''}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            </div>
+          )}
+        </div>
+
+        {renderJavaSelect()}
       </div>
     );
   }
@@ -388,6 +572,8 @@ export function MinecraftVersionPicker({
             </div>
           </div>
         )}
+
+        {renderJavaSelect()}
       </div>
     );
   }
@@ -432,6 +618,7 @@ export function MinecraftVersionPicker({
             className="rounded border-gray-600 accent-[var(--gp-ods-accent-primary)]" />
           Show beta versions
         </label>
+        {renderJavaSelect()}
       </div>
     );
   }

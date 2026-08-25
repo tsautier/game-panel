@@ -1,7 +1,7 @@
 import { normalizeEnvPayload } from '../../installPayload.js';
 
 export type OvhcloudMinecraftEdition = 'java' | 'bedrock';
-export type OvhcloudMinecraftServerType = 'vanilla' | 'paper' | 'fabric' | 'neoforge' | 'bedrock';
+export type OvhcloudMinecraftServerType = 'vanilla' | 'paper' | 'fabric' | 'neoforge' | 'forge' | 'bedrock';
 
 export type OvhcloudMinecraftImage = {
     imageId: string;
@@ -10,7 +10,7 @@ export type OvhcloudMinecraftImage = {
     javaVersion: number | null;
 };
 
-const JAVA_IMAGE_RE = /^minecraft-(java-edition|paper|fabric|neoforge)-java(8|17|21|25)$/;
+const JAVA_IMAGE_RE = /^minecraft-(java-edition|paper|fabric|neoforge|forge)-java(8|17|21|25)$/;
 
 export const MINECRAFT_BACKUP_EXTENSIONS = ['.tar.gz'];
 

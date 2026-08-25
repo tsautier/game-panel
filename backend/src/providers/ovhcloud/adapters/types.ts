@@ -52,6 +52,7 @@ export type OvhcloudInstallInput = {
     containerName: string;
     spec: ResolvedInstallSpec;
     username?: string;
+    skipTelemetry?: boolean;
 };
 
 export type OvhcloudRecreateInput = {

@@ -4,7 +4,7 @@ set -eu
 DATA_DIR="${DATA_DIR:-/data}"
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
 SERVER_JAR="${SERVER_JAR:-${DATA_DIR}/server.jar}"
-SERVER_ARTIFACT="${SERVER_ARTIFACT:-${SERVER_JAR}}"
+SERVER_ARTIFACT="${SERVER_ARTIFACT:-}"
 RUNTIME_DIR="${RUNTIME_DIR:-/run/minecraft}"
 RESTORE_ARCHIVE="${RESTORE_ARCHIVE:-${1:-}}"
 RESTORE_LOCK_DIR="${RESTORE_LOCK_DIR:-${BACKUP_DIR}/.restore.lock}"
@@ -16,6 +16,10 @@ LOG_PREFIX="[mc-restore]"
 
 META_FILE="$(gameserver_meta_file)"
 META_RELATIVE="$(metadata_file_relative_to_data || true)"
+
+if [ -z "${SERVER_ARTIFACT}" ]; then
+  SERVER_ARTIFACT="$(resolve_server_artifact_from_metadata || printf '%s\n' "${SERVER_JAR}")"
+fi
 
 LOCK_ACQUIRED="false"
 RESTORE_SUCCESS="false"
@@ -177,6 +181,7 @@ validate_archive_metadata() {
         or .serverType == "paper"
         or .serverType == "fabric"
         or .serverType == "neoforge"
+        or .serverType == "forge"
       )
     | if .serverType == "neoforge" then
         select(.neoForgeVersion | non_empty_string)
@@ -191,6 +196,11 @@ validate_archive_metadata() {
     | if .serverType == "fabric" then
         select(.fabricLoaderVersion | non_empty_string)
         | select(.fabricInstallerVersion | non_empty_string)
+      else
+        .
+      end
+    | if .serverType == "forge" then
+        select(.forgeVersion | non_empty_string)
       else
         .
       end

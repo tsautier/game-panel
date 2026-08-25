@@ -1,6 +1,7 @@
 import { startTransition } from 'react';
 import {
   extractTimestampedLogLine,
+  formatLogDisplayTime,
   type LogEntry,
   type ServerHistoryEntry,
   type ServerMetricHistoryPoint,
@@ -231,6 +232,7 @@ export function createWebSocketMessageHandler({
           return {
             id: nextId(),
             timestamp: parsedLine.timestamp,
+            displayTime: formatLogDisplayTime(parsedLine.timestamp),
             type: 'info' as const,
             message: parsedLine.message,
           };

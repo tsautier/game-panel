@@ -1,6 +1,26 @@
 # 📋 Changelog
 
-## v1.3.0 — 2026-08-12
+## v1.4.0 — 2026-08-25
+
+Adds **Minecraft Forge**, a **mods & plugins catalog** for Minecraft Java servers, and **automatic Java version selection**.
+
+### ✨ Added
+
+- **Minecraft Forge** — new OVHcloud game server image with full panel integration: installation with Minecraft and Forge version selection, game settings, console commands, backups & restore, operators, whitelist and bans, and mods. Available on Java 8, 17, 21, and 25.
+- **Mods & plugins catalog** — browse and install Minecraft mods and plugins from Modrinth without leaving the panel: search, pick a compatible version, and install in one click (plugins on Paper, mods on Fabric, NeoForge, and Forge). Installed addons can be updated, enabled, or disabled from the panel.
+- **Automatic Java version** — when installing a Minecraft Java server, the Java runtime is now resolved from the selected Minecraft version instead of being left to you; the recommended one is marked and can still be overridden.
+
+### 🔧 Changed
+
+- **Console performance** — the live console copes with high log volume much better: updates are batched, timestamps are computed once, and switching between date and time no longer reprocesses the whole buffer.
+- **Security refresh** — panel dependencies and container base images were reviewed and updated across the app and the game server images.
+- Minor UI polish and consistency improvements.
+
+### 🐛 Fixed
+
+- Various minor UI fixes.
+
+## v1.3.0 — 2026-08-11
 
 Adds **Rust**, a **Grid view** for the server list, and **native browser downloads** in the File Manager.
 

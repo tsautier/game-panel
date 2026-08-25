@@ -70,7 +70,7 @@ export async function hardWipeServer(
 
     const spec = rowToOvhcloudInstallSpec(server);
     await serverRepository.updateStatus(server.id, 'creating');
-    void installServerAsync(server.id, server.name, spec, actor);
+    void installServerAsync(server.id, server.name, spec, actor, { skipTelemetry: true });
 
     return { mode: 'hard', reinstalling: true };
 }

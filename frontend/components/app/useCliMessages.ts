@@ -1,6 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
 import type { CLIMessage } from '../../types/cli';
 import { nextId } from '../../utils/uid';
+import { formatLogDisplayTime } from '../../utils/serverRuntime';
+
+// Cap the Activity log so a long session can't grow it unbounded.
+const MAX_CLI_MESSAGES = 2000;
 
 export function useCliMessages() {
   const [cliMessages, setCliMessages] = useState<CLIMessage[]>([]);
@@ -36,9 +40,11 @@ export function useCliMessages() {
       }
       lastCliMessageRef.current = { key: dedupeKey, at: now };
 
+      const timestamp = new Date().toISOString();
       const newMessage: CLIMessage = {
         id: String(nextId()),
-        timestamp: new Date().toISOString(),
+        timestamp,
+        displayTime: formatLogDisplayTime(timestamp),
         message,
         type,
         server,
@@ -47,7 +53,7 @@ export function useCliMessages() {
       if (import.meta.env.DEV) {
         console.log('[CLI]', { timestamp: newMessage.timestamp, type, server, action, message });
       }
-      setCliMessages((prev) => [...prev, newMessage]);
+      setCliMessages((prev) => [...prev, newMessage].slice(-MAX_CLI_MESSAGES));
     },
     []
   );

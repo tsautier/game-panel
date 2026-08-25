@@ -113,6 +113,12 @@ export const OVHCLOUD_IMAGES: OvhcloudImage[] = [
   mcNeoForge('minecraft-neoforge-java17', 'Minecraft NeoForge'),
   mcNeoForge('minecraft-neoforge-java8', 'Minecraft NeoForge'),
 
+  // --- Minecraft Forge ---
+  mc('minecraft-forge-java25', 'Minecraft Forge', { FORGE_VERSION: 'latest' }, ['FORGE_VERSION']),
+  mc('minecraft-forge-java21', 'Minecraft Forge', { FORGE_VERSION: 'latest' }, ['FORGE_VERSION']),
+  mc('minecraft-forge-java17', 'Minecraft Forge', { FORGE_VERSION: 'latest' }, ['FORGE_VERSION']),
+  mc('minecraft-forge-java8', 'Minecraft Forge', { FORGE_VERSION: 'latest' }, ['FORGE_VERSION']),
+
   // --- Minecraft Bedrock ---
   {
     imageId: 'minecraft-bedrock-edition',
@@ -207,3 +213,28 @@ export const OVHCLOUD_IMAGES: OvhcloudImage[] = [
 export const OVHCLOUD_IMAGES_BY_ID = Object.fromEntries(
   OVHCLOUD_IMAGES.map((image) => [image.imageId, image])
 );
+
+// The Java variant of a Minecraft image is the image itself: we ship one per
+// (server type × Java major), named "minecraft-<type>-java<N>". Given any variant,
+// list its Java siblings so the install flow can swap the image when the resolved
+// Java version changes. Returns [] for bedrock and non-minecraft images (no suffix),
+// which the picker reads as "no Java select here".
+export interface JavaVariant {
+  major: number;
+  imageId: string;
+  dockerImage: string;
+}
+
+export function minecraftJavaVariants(imageId: string): JavaVariant[] {
+  const base = imageId.replace(/-java\d+$/, '');
+  if (base === imageId) return [];
+  return OVHCLOUD_IMAGES
+    .map((img) => {
+      const m = /-java(\d+)$/.exec(img.imageId);
+      return m && img.imageId.startsWith(`${base}-java`)
+        ? { major: Number(m[1]), imageId: img.imageId, dockerImage: img.dockerImage }
+        : null;
+    })
+    .filter((v): v is JavaVariant => v !== null)
+    .sort((a, b) => a.major - b.major);
+}

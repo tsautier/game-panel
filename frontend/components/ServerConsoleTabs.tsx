@@ -3,7 +3,7 @@ import { memo, useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment }
 import { AppButton, AppToggle } from '../src/ui/components';
 import { useBodyScrollLock } from '../src/ui/utils/useBodyScrollLock';
 import { ansiToHtml, stripAnsi } from '../utils/ansi';
-import { isServerDownLike } from '../utils/serverRuntime';
+import { isServerDownLike, formatLogDisplayTime } from '../utils/serverRuntime';
 import type { GameServer } from '../types/gameServer';
 import type { CLIMessage } from '../types/cli';
 
@@ -14,6 +14,7 @@ const DEFAULT_CONSOLE_HEIGHT = 400;
 interface LogEntry {
   id: number;
   timestamp: string;
+  displayTime?: string;
   type: 'info' | 'warning' | 'error' | 'success' | 'command' | 'action';
   message: string;
 }
@@ -360,17 +361,6 @@ export function ServerConsoleTabs({
     }
   };
 
-  const formatLogDateTime = (value: string) => {
-    const parsed = new Date(value);
-    const date = !Number.isNaN(parsed.getTime()) ? parsed : new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  };
 
   const cardBg = 'bg-gp-surface-card shadow-[0_4px_24px_rgba(2,6,23,0.55),0_1px_4px_rgba(2,6,23,0.3)]';
   const borderColor = 'border-gray-700';
@@ -398,7 +388,7 @@ export function ServerConsoleTabs({
     const lines = (cliMessages || []).map((msg) => {
       const server = msg.server ? ` ${msg.server}` : '';
       const action = msg.action ? ` -> ${msg.action}` : '';
-      const timestamp = showTimestamps ? `[${formatLogDateTime(msg.timestamp)}]` : '';
+      const timestamp = showTimestamps ? `[${msg.displayTime ?? formatLogDisplayTime(msg.timestamp)}]` : '';
       return `${timestamp}${server}${action}\n${stripAnsi(msg.message)}`.trim();
     });
 
@@ -409,7 +399,7 @@ export function ServerConsoleTabs({
 
   const handleCopyServerLogs = async () => {
     const lines = (activeLogs || []).map((log) => {
-      const timestamp = showTimestamps ? `[${formatLogDateTime(log.timestamp)}] ` : '';
+      const timestamp = showTimestamps ? `[${log.displayTime ?? formatLogDisplayTime(log.timestamp)}] ` : '';
       const message = log.message;
       return `${timestamp}${stripAnsi(message)}`.trim();
     });
@@ -709,7 +699,7 @@ export function ServerConsoleTabs({
                               <div className="mb-1 flex items-center gap-2 text-xs">
                                 {showTimestamps && (
                                   <span className="font-mono text-gray-500">
-                                    {formatLogDateTime(msg.timestamp)}
+                                    {msg.displayTime ?? formatLogDisplayTime(msg.timestamp)}
                                   </span>
                                 )}
                                 {msg.server && (
@@ -767,7 +757,7 @@ export function ServerConsoleTabs({
                 <div
                   ref={serverContainerRef}
                   onScroll={handleServerScroll}
-                  className={`gp-console-terminal h-full ${terminalBg} p-2 overflow-y-auto overflow-x-auto hide-scrollbar font-mono text-sm`}
+                  className={`gp-console-terminal h-full ${terminalBg} p-2 overflow-y-auto overflow-x-auto hide-scrollbar font-mono text-sm ${showTimestamps ? '' : 'gp-console-hide-time'}`}
                 >
                   {activeLogs.length === 0 ? (
                     <div className="py-8 text-center text-gray-500">
@@ -781,11 +771,12 @@ export function ServerConsoleTabs({
                           key={log.id}
                           className="mb-1 flex items-start gap-2 rounded px-1 leading-5 hover:bg-white/5"
                         >
-                          {showTimestamps && (
-                            <span className="shrink-0 text-gray-500">
-                              [{formatLogDateTime(log.timestamp)}]
-                            </span>
-                          )}
+                          {/* Always rendered; hidden via CSS when the container carries
+                              gp-console-hide-time, so toggling Date/Time is a single class
+                              change, not a per-row DOM mutation over thousands of rows. */}
+                          <span className="gp-log-time shrink-0 text-gray-500">
+                            [{log.displayTime ?? formatLogDisplayTime(log.timestamp)}]
+                          </span>
                           <AnsiLine
                             className={`m-0 inline-block min-w-max flex-none whitespace-pre font-mono text-sm ${getLogColor(log.type)}`}
                             message={log.message}

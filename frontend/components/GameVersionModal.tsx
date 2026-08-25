@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ArrowRight, X } from 'lucide-react';
 import { AppButton } from '../src/ui/components';
 import type { OvhcloudImage } from '../utils/ovhcloudCatalog';
@@ -9,20 +8,17 @@ const MC_SERVER_TYPES: { key: string; label: string }[] = [
   { key: 'paper',    label: 'Paper' },
   { key: 'fabric',   label: 'Fabric' },
   { key: 'neoforge', label: 'NeoForge' },
+  { key: 'forge',    label: 'Forge' },
 ];
 
 function getMcServerType(imageId: string): string {
   if (imageId.includes('paper'))        return 'paper';
   if (imageId.includes('java-edition')) return 'vanilla';
   if (imageId.includes('fabric'))       return 'fabric';
-  if (imageId.includes('neoforge'))     return 'neoforge';
+  if (imageId.includes('neoforge'))     return 'neoforge';   // must stay ABOVE 'forge'
+  if (imageId.includes('forge'))        return 'forge';
   if (imageId.includes('bedrock'))      return 'bedrock';
   return 'unknown';
-}
-
-function getMcVersion(imageId: string): string | null {
-  const m = /java(\d+)$/.exec(imageId);
-  return m ? `Java ${m[1]}` : null;
 }
 
 interface GameVersionModalProps {
@@ -32,8 +28,6 @@ interface GameVersionModalProps {
 }
 
 export function GameVersionModal({ images, onSelect, onClose }: GameVersionModalProps) {
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-
   const availableTypes = MC_SERVER_TYPES.filter(t =>
     images.some(img => getMcServerType(img.imageId) === t.key)
   );
@@ -58,61 +52,22 @@ export function GameVersionModal({ images, onSelect, onClose }: GameVersionModal
           </p>
           <div className="grid grid-cols-1 gap-2">
             {availableTypes.map(({ key, label }) => {
-              const isSelected = selectedType === key;
               const typeImages = images.filter(img => getMcServerType(img.imageId) === key);
-              const isBedrock = key === 'bedrock';
 
+              // The Java version is resolved automatically in the install modal from the
+              // Minecraft version, so selecting a type goes straight to configuration.
               return (
-                <div key={key}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedType(isSelected ? null : key)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
-                      isSelected
-                        ? 'border-[var(--gp-ods-accent-primary)] dark:border-[var(--color-cyan-400)] bg-[var(--gp-ods-accent-primary)]/8 dark:bg-[var(--color-cyan-400)]/10'
-                        : 'border-gray-200 dark:border-gray-700/40 hover:border-gray-300 dark:hover:border-gray-600/50 bg-gp-surface-elevated'
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-sm font-semibold ${isSelected ? 'text-[var(--gp-ods-accent-primary)] dark:text-[var(--color-cyan-400)]' : 'text-gray-900 dark:text-white'}`}>
-                        {label}
-                      </p>
-                    </div>
-                    <ArrowRight className={`w-4 h-4 flex-shrink-0 transition-transform ${isSelected ? 'rotate-90 text-[var(--gp-ods-accent-primary)] dark:text-[var(--color-cyan-400)]' : 'text-gray-300 dark:text-gray-600'}`} />
-                  </button>
-
-                  {/* Version buttons expand inline below the selected type */}
-                  {isSelected && (
-                    <div className="mt-2 mb-1 pl-4 border-l-2 border-[var(--gp-ods-accent-primary)]/30 dark:border-[var(--color-cyan-400)]/30 ml-4">
-                      {isBedrock ? (
-                        <AppButton
-                          type="button"
-                          onClick={() => onSelect(typeImages[0])}
-                          tone="primary"
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                        >
-                          Configure <ArrowRight className="w-3.5 h-3.5" />
-                        </AppButton>
-                      ) : (
-                        <div className="flex flex-wrap gap-2 py-1">
-                          {typeImages.map(img => {
-                            const version = getMcVersion(img.imageId);
-                            return (
-                              <button
-                                key={img.imageId}
-                                type="button"
-                                onClick={() => onSelect(img)}
-                                className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all border-[var(--gp-ods-accent-primary)] dark:border-[var(--color-cyan-400)] bg-transparent text-[var(--gp-ods-accent-primary)] dark:text-[var(--color-cyan-400)] hover:bg-[var(--gp-ods-accent-primary)] dark:hover:bg-[var(--color-cyan-400)] hover:!text-white dark:hover:!text-[#0a1628]"
-                              >
-                                {version}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => onSelect(typeImages[0])}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all border-gray-200 dark:border-gray-700/40 hover:border-gray-300 dark:hover:border-gray-600/50 bg-gp-surface-elevated"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{label}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 flex-shrink-0 text-gray-300 dark:text-gray-600" />
+                </button>
               );
             })}
           </div>

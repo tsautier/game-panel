@@ -68,7 +68,8 @@ export async function installServerAsync(
     serverId: number,
     displayName: string,
     spec: ResolvedInstallSpec,
-    username?: string
+    username?: string,
+    options?: { skipTelemetry?: boolean }
 ): Promise<void> {
     try {
         await assertServerExistsDuringInstall(serverId);
@@ -79,6 +80,7 @@ export async function installServerAsync(
             containerName,
             spec,
             username,
+            skipTelemetry: options?.skipTelemetry,
         });
         if (handledInstall) {
             return;
@@ -188,12 +190,14 @@ export async function installServerAsync(
         );
 
         await assertServerExistsDuringInstall(serverId);
-        sendGameInstalledTelemetry({
-            serverId,
-            provider: spec.provider,
-            catalogId: spec.catalogId,
-            dockerImage: spec.provider === 'external' ? spec.dockerImage : null,
-        });
+        if (!options?.skipTelemetry) {
+            sendGameInstalledTelemetry({
+                serverId,
+                provider: spec.provider,
+                catalogId: spec.catalogId,
+                dockerImage: spec.provider === 'external' ? spec.dockerImage : null,
+            });
+        }
     } catch (error) {
         if (error instanceof ServerInstallCancelledError || !(await serverExists(serverId))) {
             clearServerTransition(serverId);

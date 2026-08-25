@@ -3,6 +3,14 @@ import type {
   ReleaseConfigFileDefinition,
 } from './api/types';
 import type { ProjectZomboidMod, ProjectZomboidModId, ProjectZomboidWorkshopPreview } from '../types/projectZomboid';
+import type {
+  AddonProjectResponse,
+  AddonSearchResponse,
+  InstallAddonResponse,
+  InstalledResponse,
+  SearchAddonsParams,
+  SetAddonEnabledResponse,
+} from './minecraftAddons';
 import { getFilenameFromDisposition, getPathFilename } from './api/helpers';
 import { retryWithBackoff } from './uploadHelpers';
 import { RealtimeGateway, type RealtimeConnectionStatus } from './api/realtimeGateway';
@@ -1247,6 +1255,55 @@ class ApiClient {
       data: { paths },
     });
     return response.data;
+  }
+
+  // ── Minecraft addon catalog (Modrinth) ────────────────────────────────────
+
+  async searchMinecraftAddons(serverId: number, params: SearchAddonsParams = {}) {
+    const response = await this.client.get(`/api/servers/${serverId}/minecraft/addons-catalog/search`, {
+      params: {
+        ...(params.query ? { query: params.query } : {}),
+        ...(params.sort ? { sort: params.sort } : {}),
+        ...(params.category ? { category: params.category } : {}),
+        ...(params.offset != null ? { offset: params.offset } : {}),
+        ...(params.limit != null ? { limit: params.limit } : {}),
+        ...(params.anyVersion ? { anyVersion: true } : {}),
+      },
+    });
+    return response.data as AddonSearchResponse;
+  }
+
+  // Addon detail (id or slug): body, gallery, compatible versions, dependencies.
+  async getMinecraftAddonProject(serverId: number, projectId: string, anyVersion = false) {
+    const response = await this.client.get(
+      `/api/servers/${serverId}/minecraft/addons-catalog/projects/${encodeURIComponent(projectId)}`,
+      { params: anyVersion ? { anyVersion: true } : {} }
+    );
+    return response.data as AddonProjectResponse;
+  }
+
+  // Drives the main addons list: every jar on disk, enriched when Modrinth knows it.
+  async getMinecraftInstalledAddons(serverId: number) {
+    const response = await this.client.get(`/api/servers/${serverId}/minecraft/addons-catalog/installed`);
+    return response.data as InstalledResponse;
+  }
+
+  // Install or update are the same idempotent call; omit versionId for the latest stable release.
+  async installMinecraftAddon(serverId: number, projectId: string, versionId?: string) {
+    const response = await this.client.put(
+      `/api/servers/${serverId}/minecraft/addons-catalog/installed/${encodeURIComponent(projectId)}`,
+      versionId ? { versionId } : {}
+    );
+    return response.data as InstallAddonResponse;
+  }
+
+  // Enable/disable is keyed by file name (an unknown jar must be toggleable too).
+  async setMinecraftAddonEnabled(serverId: number, fileName: string, enabled: boolean) {
+    const response = await this.client.patch(
+      `/api/servers/${serverId}/minecraft/addons-catalog/installed`,
+      { fileName, enabled }
+    );
+    return response.data as SetAddonEnabledResponse;
   }
 
   // ── Rust OVHcloud ─────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import type { LinuxGsmProviderMetadata, OvhcloudProviderMetadata } from './types
 export type OvhcloudMinecraftMetadata = OvhcloudProviderMetadata & {
     family: 'minecraft';
     edition: 'java' | 'bedrock';
-    serverType: 'vanilla' | 'paper' | 'fabric' | 'neoforge' | 'bedrock';
+    serverType: 'vanilla' | 'paper' | 'fabric' | 'neoforge' | 'forge' | 'bedrock';
 };
 
 export type OvhcloudCounterStrike2Metadata = OvhcloudProviderMetadata & {
@@ -95,6 +95,7 @@ export function getOvhcloudMinecraftMetadata(server: GameServerRow): OvhcloudMin
         metadata.serverType === 'paper' ||
         metadata.serverType === 'fabric' ||
         metadata.serverType === 'neoforge' ||
+        metadata.serverType === 'forge' ||
         metadata.serverType === 'bedrock';
 
     if (metadata.family !== 'minecraft' || !validEdition || !validServerType) {
